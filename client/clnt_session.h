@@ -7,14 +7,13 @@
 
 class clnt_session
 {
-	using connection_ptr = std::shared_ptr<connection>;
-	connection_ptr m_srv;
+	connection& m_srv;
 
 	std::thread m_paint_th;
 	std::thread m_input_th;
 
 public:
-	clnt_session(connection_ptr srv) : m_srv(srv) {	}
+	clnt_session(connection& srv) : m_srv(srv) {	}
 
 	void start_game(/*Game options????*/);
 	

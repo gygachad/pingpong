@@ -34,10 +34,10 @@ class srv_session
 
 	//mutex lock for main model??
 	model m_gui_model;
-	/*
+	
 	std::atomic_flag m_p1_ready;
 	std::atomic_flag m_p2_ready;
-	*/
+	
 	game_state m_state = game_state::wait;
 
 public:

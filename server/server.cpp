@@ -20,17 +20,14 @@ void server::session_th(session_ptr session)
 	}
 }
 
-void server::accept_handler(	const error_code& error,
-										socket_ptr sock,
-										asio::ip::tcp::acceptor& acceptor)
+void server::accept_handler(const error_code& error,
+							connection_ptr new_client,
+							asio::ip::tcp::acceptor& acceptor)
 {
 	if (error)
 		return;
 
 	log << "New client connected\r\n";
-
-	connection_ptr new_client = make_shared<connection>();
-	new_client->accept(sock);
 
 	{
 		std::unique_lock<mutex> lock(m_cl_lock);
@@ -40,6 +37,7 @@ void server::accept_handler(	const error_code& error,
 			connection_ptr wait_client = m_wait_client_list.front();
 			m_wait_client_list.pop_front();
 
+			//Check - if wait client alive
 			session_ptr new_session = make_shared<srv_session>(wait_client, new_client);
 
 			std::thread th = std::thread(&server::session_th, this, new_session);
@@ -60,12 +58,12 @@ void server::accept_handler(	const error_code& error,
 
 void server::start_accept(asio::ip::tcp::acceptor& acc)
 {
-	socket_ptr sock = make_shared<socket>(m_io_service);
+	connection_ptr new_client = make_shared<connection>(m_io_service);
 
-	acc.async_accept(	*sock, std::bind(&server::accept_handler, this,
-						std::placeholders::_1,
-						sock,
-						std::ref(acc)));
+	acc.async_accept(new_client->socket(), std::bind(&server::accept_handler, this,
+		std::placeholders::_1,
+		new_client,
+		std::ref(acc)));
 }
 
 void server::server_thread()
@@ -105,6 +103,9 @@ void server::stop()
 	log << "Stop server thread\r\n";
 	log << "Close client connections\r\n";
 
+	m_io_service.stop();
+	m_server_th.join();
+
 	while (true)
 	{
 		connection_ptr client;
@@ -140,10 +141,6 @@ void server::stop()
 		session->stop_game();
 		//Wait session_thread???
 	}
-
-	//m_io_context.stop();
-	m_io_service.stop();
-	m_server_th.join();
 
 	m_started = false;
 }

@@ -43,7 +43,7 @@ void clnt_session::input_th()
 			continue;
 		}
 
-		m_srv->write(s);
+		m_srv.write(s);
 	}
 }
 
@@ -59,7 +59,7 @@ void clnt_session::paint_th()
 
 	while (true)
 	{
-		m_srv->read(buffer);
+		m_srv.read(buffer);
 
 		std::vector<string> cmd_line = str_tool::split(buffer, "\n");
 
@@ -101,7 +101,7 @@ void clnt_session::wait_end()
 
 void clnt_session::stop_game()
 {
-	m_srv->disconnect();
+	m_srv.disconnect();
 
 	if (m_paint_th.joinable())
 		m_paint_th.join();

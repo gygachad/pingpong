@@ -2,24 +2,10 @@
 
 bool connection::connect(const std::string& ip, const uint16_t port)
 {
-	if (m_connected)
-		disconnect();
-
 	asio::ip::tcp::endpoint ep(asio::ip::address::from_string(ip), port);
-	m_sock = std::make_shared<asio::ip::tcp::socket>(m_io_service);
+	m_sock = asio::ip::tcp::socket(m_io_service);
 	
-	m_sock->connect(ep);
-	m_connected = true;
-
-	return true;
-}
-
-bool connection::accept(sock_ptr sock)
-{
-	if (m_connected)
-		disconnect();
-
-	m_sock = sock;
+	m_sock.connect(ep);
 	m_connected = true;
 
 	return true;
@@ -37,7 +23,7 @@ size_t connection::read(std::string& buffer)
 		size_t len = 0;
 
 		std::error_code ec;
-		len = m_sock->receive(asio::buffer(recv_data), 0, ec);
+		len = m_sock.receive(asio::buffer(recv_data), 0, ec);
 
 		readed += len;
 
@@ -58,7 +44,7 @@ size_t connection::write(const std::string& str)
 {
 	std::error_code ec;
 
-	size_t len = m_sock->send(asio::buffer(str), 0, ec);
+	size_t len = m_sock.send(asio::buffer(str), 0, ec);
 	
 	if (ec.value())
 		len = 0;
@@ -69,8 +55,8 @@ size_t connection::write(const std::string& str)
 void connection::disconnect()
 {
 	error_code ec = asio::error::connection_aborted;
-	m_sock->close(ec);
-	m_sock->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+	m_sock.close(ec);
+	m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
 
 	m_connected = false;
 }

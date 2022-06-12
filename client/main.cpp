@@ -171,9 +171,11 @@ int main(int argc, const char* argv[])
     std::string ip = std::string(argv[1]);
     uint16_t port = atoi(argv[2]);
 
-    std::shared_ptr<connection> clnt = make_shared<connection>();
+    asio::io_service io_srv;
 
-    clnt->connect(ip, port);    
+    connection clnt(io_srv);
+
+    clnt.connect(ip, port);
     
     clnt_session session(clnt);
 

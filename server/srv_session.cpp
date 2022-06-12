@@ -117,7 +117,7 @@ void srv_session::input_th(		connection_ptr m_client,
 		p1_ctrl->move(main_play_bar, x_step, 0);
 		//Mirror shadow primitive moves
 		p2_ctrl->move(shadow_play_bar, -x_step, 0);
-
+		/*
 		//Move ball until game not started
 		if (m_state != game_state::start)
 		{
@@ -125,6 +125,7 @@ void srv_session::input_th(		connection_ptr m_client,
 			//Mirror shadow primitive moves
 			p2_ctrl->move(shadow_ball, -x_step, 0);
 		}
+		*/
 	}
 
 	m_state = game_state::end;

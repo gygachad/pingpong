@@ -57,21 +57,19 @@ class server
 	uint16_t m_port;
 
 	asio::io_service& m_io_service;
-
 	std::thread m_server_th;
-
 	logger log;
 
 	bool m_started = false;
 
 	void session_th(session_ptr session);
 
-	void accept_handler(const std::error_code& error,
-						socket_ptr sock,
+	void accept_handler(const error_code& error,
+						connection_ptr new_client,
 						asio::ip::tcp::acceptor& acceptor);
 
 	void start_accept(asio::ip::tcp::acceptor& acc);
-	
+
 	void server_thread();
 
 public:

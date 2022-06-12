@@ -48,7 +48,7 @@ int main(int argc, const char* argv[])
 
 	srv.stop();
 
-	//std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(1000));
+	std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(1000));
 
 	return 0;
 }
