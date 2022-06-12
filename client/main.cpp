@@ -138,6 +138,12 @@ int main(int argc, const char* argv[])
     set_console_mode();
 
     /*
+    for (char i = 0; i < 255; i++)
+    {
+        cout << i;
+    }
+    */
+    /*
     shared_ptr<screen_view> scr_view = make_shared<screen_view>();
 
     scr_view->screen_init();

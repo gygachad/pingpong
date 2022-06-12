@@ -56,8 +56,14 @@ size_t connection::read(std::string& buffer)
 
 size_t connection::write(const std::string& str)
 {
-	return
-		m_sock->send(asio::buffer(str));
+	std::error_code ec;
+
+	size_t len = m_sock->send(asio::buffer(str), 0, ec);
+	
+	if (ec.value())
+		len = 0;
+
+	return len;
 }
 
 void connection::disconnect()

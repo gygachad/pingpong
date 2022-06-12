@@ -134,7 +134,7 @@ class bar : public IGui_primitive
     std::vector<point> m_mainfield;
 
 public:
-    bar(size_t x, size_t y, size_t len)
+    bar(size_t x, size_t y, size_t len, char c = '=')
     {
         m_x = x;
         m_y = y;
@@ -145,7 +145,7 @@ public:
 
         for (size_t i = 0; i < len; i++)
         {
-            m_mainfield.emplace_back(point(m_x + i, m_y, '='));
+            m_mainfield.emplace_back(point(m_x + i, m_y, c));
         }
     }
 
