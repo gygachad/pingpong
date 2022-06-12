@@ -8,6 +8,7 @@
 #define KEY_DOWN 80
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
+#define SPACEBAR 32
 
 void clnt_session::start_game(/*Game options????*/)
 {
@@ -31,6 +32,11 @@ void clnt_session::input_th()
 		case KEY_RIGHT:
 		{
 			s = "R\n";
+			break;
+		}
+		case SPACEBAR:
+		{
+			s = "S\n";
 			break;
 		}
 		default:

@@ -29,21 +29,26 @@ int main(int argc, const char* argv[])
 
 	uint16_t port = atoi(argv[1]);
 
-	server srv(port);
+	asio::io_service io_srv;
+
+	server srv(io_srv, port);
 
 	srv.set_verbose_out(true);
-
 	srv.start();
 
 	string cmd = "";
-
+	/*
 	while (getline(cin, cmd))
 	{
 		if (cmd == "stop")
 			break;
 	}
+	*/
+	std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(10000));
 
 	srv.stop();
+
+	//std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(1000));
 
 	return 0;
 }

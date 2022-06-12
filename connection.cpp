@@ -6,8 +6,8 @@ bool connection::connect(const std::string& ip, const uint16_t port)
 		disconnect();
 
 	asio::ip::tcp::endpoint ep(asio::ip::address::from_string(ip), port);
-	m_sock = std::make_unique<asio::ip::tcp::socket>(m_io_context);
-
+	m_sock = std::make_shared<asio::ip::tcp::socket>(m_io_service);
+	
 	m_sock->connect(ep);
 	m_connected = true;
 

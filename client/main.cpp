@@ -18,19 +18,25 @@
 
 #include "clnt_session.h"
 
-std::mutex g_screen_lock;
+#define KEY_UP 72
+#define KEY_DOWN 80
+#define KEY_LEFT 75
+#define KEY_RIGHT 77
 
 void move_ball_th(controller& ctrl)
 {
     model mdl;
-    auto battlefield = mdl.create_primitive<rectangle>(0, 0, 20, 25);
-    auto ball = mdl.create_primitive<point>(5, 5, '*');
+    mdl.create_primitive<rectangle>("battlefield", 0, 0, 20, 25);
+    mdl.create_primitive<point>("ball", 5, 5, '*');
 
     size_t x = 5;
     size_t y = 5;
 
     int x_step = 1;
     int y_step = 1;
+
+    auto battlefield = mdl.get_primitive("battlefield");
+    auto ball = mdl.get_primitive("ball");
 
     ctrl.draw(battlefield);
     ctrl.draw(ball);
@@ -63,18 +69,15 @@ void move_ball_th(controller& ctrl)
     }
 }
 
-#define KEY_UP 72
-#define KEY_DOWN 80
-#define KEY_LEFT 75
-#define KEY_RIGHT 77
-
 void get_button_th(controller& ctrl)
 {
     size_t x = 1;
 
     model mdl;
 
-    auto space_bar = mdl.create_primitive<bar>(1, 23, 4);
+    mdl.create_primitive<bar>("space_bar", 1, 23, 4);
+
+    auto space_bar = mdl.get_primitive("space_bar");
 
     ctrl.draw(space_bar);
 

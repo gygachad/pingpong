@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <mutex>
+#include <map>
 
 #include "view.h"
 
@@ -179,17 +180,23 @@ public:
 
 class model
 {
-public:
     using primitive_ptr = std::shared_ptr<IGui_primitive>;
-    std::list<primitive_ptr> primitive_list;
+    std::map<std::string, primitive_ptr> gui_primitives;
 
+public:
     template<typename T, typename... Args>
-    auto create_primitive(Args... arguments)
+    bool create_primitive(const std::string& name, Args... arguments)
     {
-        auto primitive = std::make_shared<T>(T(std::forward<Args>(arguments)...));
+        if (gui_primitives.contains(name))
+            return false;
 
-        //primitive_list.push_back(primitive);
+        gui_primitives[name] = std::make_shared<T>(T(std::forward<Args>(arguments)...));
 
-        return primitive;
+        return true;
+    }
+
+    auto get_primitive(const std::string& name)
+    {
+        return gui_primitives[name];
     }
 };

@@ -13,6 +13,7 @@ void server::session_th(session_ptr session)
 
 	log << "Client fell off\r\n";
 	log << "Delete session\r\n";
+
 	{
 		lock_guard<mutex> lock(m_ss_list_lock);
 		m_session_list.remove(session);
@@ -32,21 +33,24 @@ void server::accept_handler(	const error_code& error,
 	new_client->accept(sock);
 
 	{
-		if (m_create_new_session)
+		std::unique_lock<mutex> lock(m_cl_lock);
+
+		if (m_wait_client_list.size() >= 1)
 		{
-			session_ptr new_session = make_shared<srv_session>(m_wait_client, new_client);
-		
+			connection_ptr wait_client = m_wait_client_list.front();
+			m_wait_client_list.pop_front();
+
+			session_ptr new_session = make_shared<srv_session>(wait_client, new_client);
+
 			std::thread th = std::thread(&server::session_th, this, new_session);
 			th.detach();
-			m_create_new_session = false;
 
 			log << "Create new game session\r\n";
 		}
 		else
 		{
-			m_wait_client = new_client;
-			m_create_new_session = true;
-			
+			m_wait_client_list.push_back(new_client);
+
 			log << "New client start waiting\r\n";
 		}
 	}
@@ -56,7 +60,7 @@ void server::accept_handler(	const error_code& error,
 
 void server::start_accept(asio::ip::tcp::acceptor& acc)
 {
-	socket_ptr sock = make_shared<socket>(m_io_context);
+	socket_ptr sock = make_shared<socket>(m_io_service);
 
 	acc.async_accept(	*sock, std::bind(&server::accept_handler, this,
 						std::placeholders::_1,
@@ -67,15 +71,10 @@ void server::start_accept(asio::ip::tcp::acceptor& acc)
 void server::server_thread()
 {
 	asio::ip::tcp::endpoint ep(asio::ip::tcp::v4(), m_port);
-	asio::ip::tcp::acceptor acc(m_io_context, ep);
+	asio::ip::tcp::acceptor acc(m_io_service, ep);
 
 	start_accept(acc);
-	m_io_context.run();
-}
-
-server::server(uint16_t port)
-{
-	m_port = port;
+	m_io_service.run();
 }
 
 server::~server()
@@ -104,18 +103,24 @@ bool server::start()
 void server::stop()
 {
 	log << "Stop server thread\r\n";
-
-	m_io_context.stop();
-	m_server_th.join();
-
 	log << "Close client connections\r\n";
 
-	connection_ptr client;
-
-	if(m_create_new_session)
+	while (true)
 	{
-		lock_guard<mutex> lock(m_cl_lock);
-		m_wait_client->disconnect();
+		connection_ptr client;
+
+		{
+			lock_guard<mutex> lock(m_cl_lock);
+
+			if (m_wait_client_list.empty())
+				break;
+
+			client = m_wait_client_list.front();
+			m_wait_client_list.pop_front();
+		}
+
+		client->disconnect();
+		//Wait session_thread???
 	}
 
 	while (true)
@@ -129,16 +134,16 @@ void server::stop()
 			if (m_session_list.empty())
 				break;
 
-			log << "Get game\r\n";
-
 			session = m_session_list.front();
 		}
-
-		log << "Stop game\r\n";
 
 		session->stop_game();
 		//Wait session_thread???
 	}
+
+	//m_io_context.stop();
+	m_io_service.stop();
+	m_server_th.join();
 
 	m_started = false;
 }

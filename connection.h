@@ -11,7 +11,7 @@ class connection
 {
 	using sock_ptr = std::shared_ptr<asio::ip::tcp::socket>;
 	
-	asio::io_context m_io_context;
+	asio::io_service m_io_service;
 	sock_ptr m_sock;
 
 	bool m_connected = false;

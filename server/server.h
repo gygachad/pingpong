@@ -48,17 +48,16 @@ class server
 	using connection_ptr = std::shared_ptr<connection>;
 	using thread_ptr = std::shared_ptr<std::thread>;
 
-	connection_ptr m_wait_client;
+	std::list<connection_ptr> m_wait_client_list;
 	std::mutex m_cl_lock;
-	bool m_create_new_session = false;
 
 	std::list<session_ptr> m_session_list;
 	std::mutex m_ss_list_lock;
 
 	uint16_t m_port;
-	size_t m_bulk_size;
 
-	asio::io_context m_io_context;
+	asio::io_service& m_io_service;
+
 	std::thread m_server_th;
 
 	logger log;
@@ -76,7 +75,7 @@ class server
 	void server_thread();
 
 public:
-	server(uint16_t port);
+	server(asio::io_service& io_service, uint16_t port) : m_io_service(io_service), m_port(port) {}
 	~server();
 
 	void set_verbose_out(bool enable);
