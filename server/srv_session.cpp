@@ -1,4 +1,4 @@
-#include "srv_game_session.h"
+#include "srv_session.h"
 
 #define PPP_MAIN_FIELD_X 0
 #define PPP_MAIN_FIELD_Y 0
@@ -16,13 +16,13 @@
 #define PPP_S_BALL_X 3
 #define PPP_S_BALL_Y 2
 
-void srv_game_session::start_game(/*Game options????*/)
+void srv_session::start_game(/*Game options????*/)
 {
-	srv_game_session::net_view_ptr player1_view = make_shared<network_view>(m_p1_client);
-	srv_game_session::net_view_ptr player2_view = make_shared<network_view>(m_p2_client);
+	net_view_ptr player1_view = make_shared<network_view>(m_p1_client);
+	net_view_ptr player2_view = make_shared<network_view>(m_p2_client);
 
-	srv_game_session::controller_ptr player1_ctrl = make_shared<controller>(player1_view);
-	srv_game_session::controller_ptr player2_ctrl = make_shared<controller>(player2_view);
+	controller_ptr player1_ctrl = make_shared<controller>(player1_view);
+	controller_ptr player2_ctrl = make_shared<controller>(player2_view);
 
 	auto battlefield = m_main_mdl.create_primitive<rectangle>(PPP_MAIN_FIELD_X, PPP_MAIN_FIELD_Y, PPP_MAIN_FIELD_H, PPP_MAIN_FIELD_W);
 
@@ -30,15 +30,14 @@ void srv_game_session::start_game(/*Game options????*/)
 	player1_ctrl->draw(battlefield);
 	player2_ctrl->draw(battlefield);
 
-	m_paint_th = std::thread(&srv_game_session::paint_th, this, player1_ctrl, player2_ctrl);
-	m_p1_input_th = std::thread(&srv_game_session::input_th, this, m_p1_client, player1_ctrl, player2_ctrl);
-	m_p2_input_th = std::thread(&srv_game_session::input_th, this, m_p2_client, player2_ctrl, player1_ctrl);
-	//Ball thread
+	m_paint_th = std::thread(&srv_session::paint_th, this, player1_ctrl, player2_ctrl);
+	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_ctrl, player2_ctrl);
+	m_p2_input_th = std::thread(&srv_session::input_th, this, m_p2_client, player2_ctrl, player1_ctrl);
 }
 
-void srv_game_session::input_th(pingpong_client::client_ptr m_client, 
-								srv_game_session::controller_ptr p1_ctrl,
-								srv_game_session::controller_ptr p2_ctrl)
+void srv_session::input_th(		connection_ptr m_client, 
+								controller_ptr p1_ctrl,
+								controller_ptr p2_ctrl)
 {
 
 	string buffer = "";
@@ -75,7 +74,7 @@ void srv_game_session::input_th(pingpong_client::client_ptr m_client,
 	}
 }
 
-void srv_game_session::paint_th(srv_game_session::controller_ptr p1_ctrl, srv_game_session::controller_ptr p2_ctrl)
+void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
 {
 	string buffer;
 
@@ -115,7 +114,7 @@ void srv_game_session::paint_th(srv_game_session::controller_ptr p1_ctrl, srv_ga
 	}
 }
 
-void srv_game_session::stop_game()
+void srv_session::stop_game()
 {
 	m_p1_client->disconnect();
 	m_p2_client->disconnect();

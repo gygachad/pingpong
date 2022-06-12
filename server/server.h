@@ -8,12 +8,8 @@
 
 #include <asio.hpp>
 
-using namespace std;
-
-#include "..\str_tool.h"
-#include "srv_game_session.h"
-
-class srv_game_session;
+#include "..\server\srv_session.h"
+#include "..\connection.h"
 
 class logger
 {
@@ -28,7 +24,7 @@ public:
 	logger& operator<<(const std::string& data)
 	{
 		if (m_enabled)
-			cout << data;
+			std::cout << data;
 
 		return *this;
 	}
@@ -42,33 +38,33 @@ public:
 	~ICmd_dispatcher() {}
 };
 
-class pingpong_server
+class server
 {
 	using socket = asio::ip::tcp::socket;
-	using socket_ptr = shared_ptr<socket>;
-	using client_ptr = shared_ptr<pingpong_client>;
-	using session_ptr = shared_ptr<srv_game_session>;
+	using socket_ptr = std::shared_ptr<socket>;
+	using session_ptr = std::shared_ptr<srv_session>;
+	using connection_ptr = std::shared_ptr<connection>;
 
-	client_ptr m_wait_client;
-	mutex m_cl_lock;
+	connection_ptr m_wait_client;
+	std::mutex m_cl_lock;
 	bool m_create_new_session = false;
 
-	list<session_ptr> m_sesssion_list;
-	mutex m_ss_list_lock;
+	std::list<session_ptr> m_sesssion_list;
+	std::mutex m_ss_list_lock;
 
 	uint16_t m_port;
 	size_t m_bulk_size;
 
 	asio::io_context m_io_context;
-	thread m_server_th;
+	std::thread m_server_th;
 
 	logger log;
 
 	bool m_started = false;
 
-	void client_session(client_ptr client);
+	void client_session(connection_ptr client);
 	
-	void accept_handler(const error_code& error,
+	void accept_handler(const std::error_code& error,
 						socket_ptr sock,
 						asio::ip::tcp::acceptor& acceptor);
 
@@ -77,8 +73,8 @@ class pingpong_server
 	void server_thread();
 
 public:
-	pingpong_server(uint16_t port);
-	~pingpong_server();
+	server(uint16_t port);
+	~server();
 
 	void set_verbose_out(bool enable);
 

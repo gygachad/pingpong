@@ -7,7 +7,7 @@
 
 #define BLOCK_SIZE 512
 
-class pingpong_client
+class connection
 {
 	using sock_ptr = std::shared_ptr<asio::ip::tcp::socket>;
 	
@@ -17,9 +17,9 @@ class pingpong_client
 	bool m_connected = false;
 
 public:
-	using client_ptr = std::shared_ptr<pingpong_client>;
+	using connection_ptr = std::shared_ptr<connection>;
 
-	pingpong_client() { }
+	connection() { }
 
 	bool connect(const std::string& ip, const uint16_t port);
 	bool accept(sock_ptr sock);

@@ -14,9 +14,9 @@
 #include "..\mvc\model.h"
 #include "..\mvc\controller.h"
 #include "..\mvc\screen_view.h"
-#include "..\pingpong_client.h"
+#include "..\connection.h"
 
-#include "clnt_game_session.h"
+#include "clnt_session.h"
 
 std::mutex g_screen_lock;
 
@@ -162,11 +162,11 @@ int main(int argc, const char* argv[])
     std::string ip = std::string(argv[1]);
     uint16_t port = atoi(argv[2]);
 
-    std::shared_ptr<pingpong_client> clnt = make_shared<pingpong_client>();
+    std::shared_ptr<connection> clnt = make_shared<connection>();
 
     clnt->connect(ip, port);    
     
-    clnt_game_session session(clnt);
+    clnt_session session(clnt);
 
     session.start_game();
     session.wait_end();

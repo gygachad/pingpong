@@ -1,19 +1,21 @@
 #include <conio.h>
 
-#include "clnt_game_session.h"
+#include "..\mvc\screen_view.h"
+#include "..\str_tool.h"
+#include "clnt_session.h"
 
 #define KEY_UP 72
 #define KEY_DOWN 80
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
 
-void clnt_game_session::start_game(/*Game options????*/)
+void clnt_session::start_game(/*Game options????*/)
 {
-	m_paint_th = std::thread(&clnt_game_session::paint_th, this);
-	m_input_th = std::thread(&clnt_game_session::input_th, this);
+	m_paint_th = std::thread(&clnt_session::paint_th, this);
+	m_input_th = std::thread(&clnt_session::input_th, this);
 }
 
-void clnt_game_session::input_th()
+void clnt_session::input_th()
 {
 	string s;
 
@@ -39,7 +41,7 @@ void clnt_game_session::input_th()
 	}
 }
 
-void clnt_game_session::paint_th()
+void clnt_session::paint_th()
 {
 	std::string buffer;
 	stringstream ss;
@@ -82,7 +84,7 @@ void clnt_game_session::paint_th()
 	}
 }
 
-void clnt_game_session::wait_end()
+void clnt_session::wait_end()
 {
 	if (m_paint_th.joinable())
 		m_paint_th.join();
@@ -91,7 +93,7 @@ void clnt_game_session::wait_end()
 		m_input_th.join();
 }
 
-void clnt_game_session::stop_game()
+void clnt_session::stop_game()
 {
 	m_srv->disconnect();
 

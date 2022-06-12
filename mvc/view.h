@@ -5,8 +5,7 @@
 #include <iostream>
 #include <utility>
 #include <functional>
-
-#include "..\pingpong_client.h"
+#include <mutex>
 
 class view
 {

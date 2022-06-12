@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "pingpong_server.h"
+#include "server.h"
 
 using namespace std;
 
@@ -29,7 +29,7 @@ int main(int argc, const char* argv[])
 
 	uint16_t port = atoi(argv[1]);
 
-	pingpong_server srv(port);
+	server srv(port);
 
 	srv.set_verbose_out(true);
 

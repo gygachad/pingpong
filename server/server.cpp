@@ -1,6 +1,6 @@
-#include "pingpong_server.h"
+#include "server.h"
 
-void pingpong_server::accept_handler(	const error_code& error,
+void server::accept_handler(	const error_code& error,
 										socket_ptr sock,
 										asio::ip::tcp::acceptor& acceptor)
 {
@@ -9,7 +9,7 @@ void pingpong_server::accept_handler(	const error_code& error,
 
 	log << "New client connected\r\n";
 
-	client_ptr new_client = make_shared<pingpong_client>();
+	connection_ptr new_client = make_shared<connection>();
 	new_client->accept(sock);
 
 	session_ptr new_session;
@@ -18,7 +18,7 @@ void pingpong_server::accept_handler(	const error_code& error,
 		lock_guard<mutex> lock(m_cl_lock);
 		if (m_create_new_session)
 		{
-			new_session = make_shared<srv_game_session>(m_wait_client, new_client, *this);
+			new_session = make_shared<srv_session>(m_wait_client, new_client, *this);
 			m_create_new_session = false;
 			log << "Create new game session\r\n";
 		}
@@ -45,17 +45,17 @@ void pingpong_server::accept_handler(	const error_code& error,
 	start_accept(acceptor);
 }
 
-void pingpong_server::start_accept(asio::ip::tcp::acceptor& acc)
+void server::start_accept(asio::ip::tcp::acceptor& acc)
 {
 	socket_ptr sock = make_shared<socket>(m_io_context);
 
-	acc.async_accept(	*sock, std::bind(&pingpong_server::accept_handler, this,
+	acc.async_accept(	*sock, std::bind(&server::accept_handler, this,
 						std::placeholders::_1,
 						sock,
 						std::ref(acc)));
 }
 
-void pingpong_server::server_thread()
+void server::server_thread()
 {
 	asio::ip::tcp::endpoint ep(asio::ip::tcp::v4(), m_port);
 	asio::ip::tcp::acceptor acc(m_io_context, ep);
@@ -64,18 +64,18 @@ void pingpong_server::server_thread()
 	m_io_context.run();
 }
 
-pingpong_server::pingpong_server(uint16_t port)
+server::server(uint16_t port)
 {
 	m_port = port;
 }
 
-pingpong_server::~pingpong_server()
+server::~server()
 {
 	if (m_started)
 		stop();
 }
 
-void pingpong_server::set_verbose_out(bool enable)
+void server::set_verbose_out(bool enable)
 {
 	if (enable)
 		log.enable();
@@ -83,16 +83,16 @@ void pingpong_server::set_verbose_out(bool enable)
 		log.disable();
 }
 
-bool pingpong_server::start()
+bool server::start()
 {
 	m_started = true;
 
 	log << "Start server thread\r\n";
-	m_server_th = thread(&pingpong_server::server_thread, this);
+	m_server_th = thread(&server::server_thread, this);
 	return true;
 }
 
-void pingpong_server::stop()
+void server::stop()
 {
 	log << "Stop server thread\r\n";
 
@@ -101,7 +101,7 @@ void pingpong_server::stop()
 
 	log << "Close client connections\r\n";
 
-	client_ptr client;
+	connection_ptr client;
 
 	if(m_create_new_session)
 	{

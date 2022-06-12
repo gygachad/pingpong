@@ -12,16 +12,16 @@ file(COPY ${CMAKE_BINARY_DIR}/version.h
 		
 add_executable(pingpong_server 
 					server/main.cpp 
-					server/srv_game_session.cpp 
-					server/pingpong_server.cpp 
-					pingpong_client.cpp 
+					server/srv_session.cpp 
+					server/server.cpp 
+					connection.cpp 
 					str_tool.cpp 
 					version.cpp)
 					
 add_executable(pingpong_client 
 					client/main.cpp 
-					client/clnt_game_session.cpp 
-					pingpong_client.cpp 
+					client/clnt_session.cpp 
+					connection.cpp 
 					str_tool.cpp 
 					version.cpp)
 

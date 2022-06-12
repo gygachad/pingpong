@@ -2,13 +2,16 @@
 #include <iostream>
 
 #include "view.h"
+#include "..\connection.h"
 
 class network_view : public view
 {
-    pingpong_client::client_ptr m_client;
+    using connection_ptr = std::shared_ptr<connection>;
+
+    connection_ptr m_client;
 
 public:
-    network_view(pingpong_client::client_ptr client) : m_client(client)
+    network_view(connection_ptr client) : m_client(client)
     {
 
     }

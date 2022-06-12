@@ -1,6 +1,6 @@
-#include "pingpong_client.h"
+#include "connection.h"
 
-bool pingpong_client::connect(const std::string& ip, const uint16_t port)
+bool connection::connect(const std::string& ip, const uint16_t port)
 {
 	if (m_connected)
 		disconnect();
@@ -14,7 +14,7 @@ bool pingpong_client::connect(const std::string& ip, const uint16_t port)
 	return true;
 }
 
-bool pingpong_client::accept(sock_ptr sock)
+bool connection::accept(sock_ptr sock)
 {
 	if (m_connected)
 		disconnect();
@@ -25,7 +25,7 @@ bool pingpong_client::accept(sock_ptr sock)
 	return true;
 }
 
-size_t pingpong_client::read(std::string& buffer)
+size_t connection::read(std::string& buffer)
 {
 	char recv_data[BLOCK_SIZE];
 	buffer.clear();
@@ -54,13 +54,13 @@ size_t pingpong_client::read(std::string& buffer)
 	return readed;
 }
 
-size_t pingpong_client::write(const std::string& str)
+size_t connection::write(const std::string& str)
 {
 	return
 		m_sock->send(asio::buffer(str));
 }
 
-void pingpong_client::disconnect()
+void connection::disconnect()
 {
 	error_code ec = asio::error::connection_aborted;
 	m_sock->close(ec);
