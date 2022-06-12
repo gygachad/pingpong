@@ -19,7 +19,8 @@ class connection
 public:
 	using connection_ptr = std::shared_ptr<connection>;
 
-	connection() { }
+	connection() {}
+	~connection() {}
 
 	bool connect(const std::string& ip, const uint16_t port);
 	bool accept(sock_ptr sock);

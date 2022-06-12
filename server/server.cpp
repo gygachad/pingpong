@@ -1,5 +1,24 @@
 #include "server.h"
 
+void server::session_th(session_ptr session)
+{
+	log << "Start game\r\n";
+	{
+		lock_guard<mutex> lock(m_ss_list_lock);
+		m_session_list.push_back(session);
+	}
+
+	session->start_game();
+	session->wait_end();
+
+	log << "Client fell off\r\n";
+	log << "Delete session\r\n";
+	{
+		lock_guard<mutex> lock(m_ss_list_lock);
+		m_session_list.remove(session);
+	}
+}
+
 void server::accept_handler(	const error_code& error,
 										socket_ptr sock,
 										asio::ip::tcp::acceptor& acceptor)
@@ -12,34 +31,24 @@ void server::accept_handler(	const error_code& error,
 	connection_ptr new_client = make_shared<connection>();
 	new_client->accept(sock);
 
-	session_ptr new_session;
-
 	{
-		lock_guard<mutex> lock(m_cl_lock);
 		if (m_create_new_session)
 		{
-			new_session = make_shared<srv_session>(m_wait_client, new_client, *this);
+			session_ptr new_session = make_shared<srv_session>(m_wait_client, new_client);
+		
+			std::thread th = std::thread(&server::session_th, this, new_session);
+			th.detach();
 			m_create_new_session = false;
+
 			log << "Create new game session\r\n";
 		}
 		else
 		{
 			m_wait_client = new_client;
 			m_create_new_session = true;
+			
 			log << "New client start waiting\r\n";
 		}
-	}
-
-	//Add session and start thread
-	if(m_create_new_session == false)
-	{
-		{
-			lock_guard<mutex> lock(m_ss_list_lock);
-			m_sesssion_list.push_back(new_session);
-		}
-
-		//Pass game options
-		new_session->start_game();
 	}
 
 	start_accept(acceptor);
@@ -112,19 +121,23 @@ void server::stop()
 	while (true)
 	{
 		session_ptr session;
+		thread_ptr session_th;
 
 		{
 			lock_guard<mutex> lock(m_ss_list_lock);
 
-			if (m_sesssion_list.empty())
+			if (m_session_list.empty())
 				break;
 
-			session = m_sesssion_list.front();
+			log << "Get game\r\n";
+
+			session = m_session_list.front();
 		}
 
-		log << "Shutdown client\r\n";
+		log << "Stop game\r\n";
 
 		session->stop_game();
+		//Wait session_thread???
 	}
 
 	m_started = false;

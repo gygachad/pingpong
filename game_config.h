@@ -1,0 +1,18 @@
+#pragma once
+
+#define PPP_MAIN_FIELD_X 0
+#define PPP_MAIN_FIELD_Y 0
+#define PPP_MAIN_FIELD_W 25
+#define PPP_MAIN_FIELD_H 30
+
+#define PPP_BAR_LEN 5
+#define PPP_M_BAR_X PPP_MAIN_FIELD_X + 1
+#define PPP_M_BAR_Y PPP_MAIN_FIELD_H - 2
+#define PPP_S_BAR_X PPP_MAIN_FIELD_W - PPP_BAR_LEN - 1
+#define PPP_S_BAR_Y PPP_MAIN_FIELD_Y + 1
+
+
+#define PPP_M_BALL_X PPP_MAIN_FIELD_X + 3
+#define PPP_M_BALL_Y PPP_MAIN_FIELD_H - 3
+#define PPP_S_BALL_X PPP_MAIN_FIELD_W - 4
+#define PPP_S_BALL_Y PPP_MAIN_FIELD_Y + 2

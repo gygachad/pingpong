@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <list>
+#include <map>
 
 #include <asio.hpp>
 
@@ -38,18 +39,20 @@ public:
 	~ICmd_dispatcher() {}
 };
 
+
 class server
 {
 	using socket = asio::ip::tcp::socket;
 	using socket_ptr = std::shared_ptr<socket>;
 	using session_ptr = std::shared_ptr<srv_session>;
 	using connection_ptr = std::shared_ptr<connection>;
+	using thread_ptr = std::shared_ptr<std::thread>;
 
 	connection_ptr m_wait_client;
 	std::mutex m_cl_lock;
 	bool m_create_new_session = false;
 
-	std::list<session_ptr> m_sesssion_list;
+	std::list<session_ptr> m_session_list;
 	std::mutex m_ss_list_lock;
 
 	uint16_t m_port;
@@ -62,8 +65,8 @@ class server
 
 	bool m_started = false;
 
-	void client_session(connection_ptr client);
-	
+	void session_th(session_ptr session);
+
 	void accept_handler(const std::error_code& error,
 						socket_ptr sock,
 						asio::ip::tcp::acceptor& acceptor);

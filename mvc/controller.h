@@ -12,10 +12,8 @@ class controller
     using primitive_ptr = std::shared_ptr<IGui_primitive>;
 
 public:
-    controller(std::shared_ptr<view> client_view) : m_view(client_view)
-    {
-    }
-
+    controller(std::shared_ptr<view> client_view) : m_view(client_view) {}
+    ~controller() {}
     /*
     void clean(primitive_ptr primitive)
     {

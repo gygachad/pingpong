@@ -1,21 +1,5 @@
 #include "srv_session.h"
-
-#define PPP_MAIN_FIELD_X 0
-#define PPP_MAIN_FIELD_Y 0
-#define PPP_MAIN_FIELD_W 25
-#define PPP_MAIN_FIELD_H 30
-
-#define PPP_BAR_LEN 5
-#define PPP_M_BAR_X PPP_MAIN_FIELD_X + 1
-#define PPP_M_BAR_Y PPP_MAIN_FIELD_H - 2
-#define PPP_S_BAR_X PPP_MAIN_FIELD_W - PPP_BAR_LEN - 1
-#define PPP_S_BAR_Y PPP_MAIN_FIELD_Y + 1
-
-
-#define PPP_M_BALL_X PPP_MAIN_FIELD_X + 3
-#define PPP_M_BALL_Y PPP_MAIN_FIELD_H - 3
-#define PPP_S_BALL_X PPP_MAIN_FIELD_W - 4
-#define PPP_S_BALL_Y PPP_MAIN_FIELD_Y + 2
+#include "..\game_config.h"
 
 void srv_session::start_game(/*Game options????*/)
 {
@@ -55,6 +39,9 @@ void srv_session::input_th(		connection_ptr m_client,
 	while (true)
 	{
 		size_t len = m_client->read(buffer);
+		
+		if (len == 0)
+			break;
 
 		if (buffer == "L\n")
 		{
@@ -71,14 +58,24 @@ void srv_session::input_th(		connection_ptr m_client,
 			else
 				continue;
 		}
+		else if (buffer == "S\n")
+		{
+			m_state = game_state::start;
+			//condition variable
+		}
+		else if (buffer == "S\n")
+		{
+			m_state = game_state::end;
+		}
 		else
 			continue;
 
 		p1_ctrl->move(main_play_bar, x_step, 0);
 		//Mirror shadow primitive moves
 		p2_ctrl->move(shadow_play_bar, -x_step, 0);
-
 	}
+
+	m_state = game_state::end;
 }
 
 void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
@@ -90,8 +87,6 @@ void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
 
 	size_t x = PPP_M_BALL_X;
 	size_t y = PPP_M_BALL_Y;
-	size_t x_shadow = PPP_S_BALL_X;
-	size_t y_shadow = PPP_S_BALL_Y;
 
 	int x_step = 1;
 	int y_step = -1;
@@ -101,6 +96,13 @@ void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
 
 	while (true)
 	{
+		//Check game status
+		if (m_state == game_state::end)
+		{
+			stop_game();
+			break;
+		}
+
 		if (x == PPP_MAIN_FIELD_W - 2)
 			x_step = -1;
 
@@ -126,9 +128,14 @@ void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
 
 void srv_session::stop_game()
 {
+	m_state = game_state::end;
+
 	m_p1_client->disconnect();
 	m_p2_client->disconnect();
+}
 
+void srv_session::wait_end()
+{
 	if (m_paint_th.joinable())
 		m_paint_th.join();
 
