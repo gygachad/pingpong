@@ -25,11 +25,6 @@ void srv_session::start_game()
 	init_gui(player1_model);
 	init_gui(player2_model);
 
-	/*
-	player1_model->draw_primitive("battlefield");
-	player2_model->draw_primitive("battlefield");
-	*/
-
 	m_paint_th = std::thread(&srv_session::paint_th, this, player1_model, player2_model);
 	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_model, player2_model, true);
 	m_p2_input_th = std::thread(&srv_session::input_th, this, m_p2_client, player2_model, player1_model, false);
@@ -54,13 +49,6 @@ void srv_session::input_th(		connection_ptr m_client,
 
 	size_t battlefield_x = p1_model->get_primitive("battlefield")->get_x();
 	size_t battlefield_w = p1_model->get_primitive("battlefield")->get_w();
-
-	/*
-	p1_model->draw_primitive("bar");
-	p2_model->draw_primitive("shadow_bar");
-	p1_model->draw_primitive("player_name");
-	p2_model->draw_primitive("shadow_player_name");
-	*/
 
 	int x_step = 0;
 
@@ -182,11 +170,6 @@ void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
 	p1_model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
 	p2_model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
 
-	/*
-	p1_model->draw_primitive("ball");
-	p2_model->draw_primitive("shadow_ball");
-	*/
-
 	//Wait for players ready
 	m_p1_ready.wait(false);
 	m_p2_ready.wait(false);
@@ -220,9 +203,6 @@ void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
 		p1_model->move_primitive("ball", x_step, y_step);
 		//Mirror shadow primitive moves
 		p2_model->move_primitive("shadow_ball", -x_step, -y_step);
-
-		//lock
-		//m_view.paint
 
 		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
 	}
