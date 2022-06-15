@@ -12,7 +12,8 @@ file(COPY ${CMAKE_BINARY_DIR}/version.h
 		
 add_executable(pingpong_server 
 					server/main.cpp 
-					server/srv_session.cpp 
+					server/srv_session.cpp
+                    server/player.cpp
 					server/server.cpp 
 					connection.cpp 
 					str_tool.cpp 

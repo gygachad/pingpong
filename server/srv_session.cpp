@@ -162,9 +162,11 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	m_state.store(game_state::start);
 
 	auto p1_bar = p1_model->get_primitive("bar");
-	auto p2_bar = p1_model->get_primitive("shadow_bar");
+	auto p2_bar = p2_model->get_primitive("shadow_bar");
 	
 	bool change_angle = false;
+	bool p1_pass = true;
+	bool p2_pass = true;
 
 	while (true)
 	{
@@ -175,42 +177,62 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		size_t bar_x = 0;
 		size_t bar_w = 0;
 
-		if (y <= MAIN_FIELD_Y + 2)
+		if (y == MAIN_FIELD_Y + 2)
 		{
 			bar_x = p2_bar->get_x();
 			bar_w = p2_bar->get_w();
 
-			if (x < bar_x ||
-				x >= bar_x + bar_w)
+			if ((x < bar_x || x > bar_x + bar_w))
 			{
-				player2->add_goal();
-				player1->add_shadow_goal();
+				if (p1_pass)
+				{
+					player2->add_goal();
+					player1->add_shadow_goal();
+				}
+				else
+					p1_pass = true;
 			}
 			else
 			{
 				change_angle = true;
+				y_step = 1;
 			}
-			y_step = 1;
 		}
 
-		if (y >= MAIN_FIELD_H - 3)
+		if (y == MAIN_FIELD_H - 3)
 		{
 			bar_x = p1_bar->get_x();
 			bar_w = p1_bar->get_w();
 
-			if (x < bar_x ||
-				x >= bar_x + bar_w)
+			if ((x < bar_x || x > bar_x + bar_w))
 			{
-				player1->add_goal();
-				player2->add_shadow_goal();
+				if (p2_pass)
+				{
+					player1->add_goal();
+					player2->add_shadow_goal();
+				}
+				else
+					p2_pass = true;
 			}
 			else
 			{
 				change_angle = true;
+				y_step = -1;
 			}
-			y_step = -1;
 		}
 
+		if (y == MAIN_FIELD_Y + 1)
+		{
+			y_step = 1;
+			p1_pass = false;
+		}
+		if (y == MAIN_FIELD_H - 2)
+		{
+			y_step = -1;
+			p2_pass = false;
+		}
+
+		//Change ball angle if ball hit bar corners
 		if (change_angle)
 		{
 			if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
@@ -226,10 +248,10 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			change_angle = false;
 		}
 
-		if (x + x_step >= MAIN_FIELD_W - 1)
+		if (int(x + x_step) >= int(MAIN_FIELD_W - 1))
 			x_step = -1;
 
-		if (x + x_step <= MAIN_FIELD_X)
+		if (int(x + x_step) <= int(MAIN_FIELD_X))
 			x_step = 1;
 
 		x += x_step;

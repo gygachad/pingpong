@@ -1,6 +1,6 @@
 #pragma once
 
-#define BALL_TRESHOLD 50
+#define BALL_TRESHOLD 75
 
 #define MAIN_FIELD_X 0
 #define MAIN_FIELD_Y 0
@@ -30,3 +30,11 @@
 #define KEY_LEFT 75
 #define KEY_RIGHT 77
 #define KEY_SPACEBAR 32
+
+enum class game_state
+{
+	wait,
+	ready,
+	start,
+	stop
+};

@@ -69,7 +69,7 @@ int main(int argc, const char* argv[])
         std::cout << "Usage: pingpong_client server_addr port_num" << std::endl;
         return 0;
     }
-    std::stringstream ss(argv[1]);
+    std::stringstream ss(argv[2]);
 
     uint16_t port = 0;
     ss >> port;
