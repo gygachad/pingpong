@@ -43,9 +43,9 @@ void srv_session::input_th(		connection_ptr m_client,
 	std::string player_name;
 
 	if (master)
-		player_name = "PLAYER1_NAME:WAIT";
+		player_name = "player1:wait";
 	else
-		player_name = "PLAYER2_NAME:WAIT";
+		player_name = "player2:wait";
 
 	p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
 	p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
@@ -66,6 +66,7 @@ void srv_session::input_th(		connection_ptr m_client,
 
 	while (true)
 	{
+		//Check if socket alive
 		size_t len = m_client->read(buffer);
 		
 		if (len == 0)
@@ -103,10 +104,6 @@ void srv_session::input_th(		connection_ptr m_client,
 
 					break;
 				}
-				case 'E':
-				{
-					continue;
-				}
 				case KEY_SPACEBAR:
 				{
 					if (master)
@@ -120,18 +117,35 @@ void srv_session::input_th(		connection_ptr m_client,
 						m_p2_ready.notify_one();
 					}
 
+					p1_model->create_primitive<text_box>(	"player_name",
+															MAIN_PLAYERNAME_FIELD_X,
+															MAIN_PLAYERNAME_FIELD_Y,
+															player_name + ":ready");
+					p2_model->create_primitive<text_box>(	"shadow_player_name",
+															SHADOW_PLAYER_NAME_FIELD_X,
+															SHADOW_PLAYER_NAME_FIELD_Y,
+															player_name + ":ready");
 					continue;
 				}
 				default:
 				{
 					if (m_state.load() == game_state::wait)
 					{
-						if (key_code >= '0' && key_code <= 'z')
+						if (player_name.length() < 10)
 						{
-							player_name += ss.str() + ":WAIT";
+							if (key_code >= 'a' && key_code <= 'z')
+							{
+								player_name += char(key_code);
 
-							p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
-							p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
+								p1_model->create_primitive<text_box>(	"player_name", 
+																		MAIN_PLAYERNAME_FIELD_X, 
+																		MAIN_PLAYERNAME_FIELD_Y, 
+																		player_name + ":wait");
+								p2_model->create_primitive<text_box>(	"shadow_player_name", 
+																		SHADOW_PLAYER_NAME_FIELD_X, 
+																		SHADOW_PLAYER_NAME_FIELD_Y, 
+																		player_name + ":wait");
+							}
 						}
 					}
 					
