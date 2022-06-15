@@ -8,13 +8,8 @@ void srv_session::init_gui(model_ptr model)
 	model->create_primitive<rectangle>("battlefield",	MAIN_FIELD_X, MAIN_FIELD_Y,
 														MAIN_FIELD_W, MAIN_FIELD_H);
 
-	model->create_primitive<bar>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN);
-	model->create_primitive<bar>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN);
-	model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
-	model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
-
-	//model->create_primitive<text_box>("player1_score",	PPP_SCOREBAR_FIELD_X, PPP_SCOREBAR_FIELD_Y, "0");
-	//model->create_primitive<text_box>("player2_score", PPP_SCOREBAR_FIELD_X, PPP_SCOREBAR_FIELD_Y, "0");
+	model->create_primitive<line>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN, '=');
+	model->create_primitive<line>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN, '=');
 }
 
 void srv_session::start_game()
@@ -30,8 +25,10 @@ void srv_session::start_game()
 	init_gui(player1_model);
 	init_gui(player2_model);
 
+	/*
 	player1_model->draw_primitive("battlefield");
 	player2_model->draw_primitive("battlefield");
+	*/
 
 	m_paint_th = std::thread(&srv_session::paint_th, this, player1_model, player2_model);
 	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_model, player2_model, true);
@@ -46,21 +43,25 @@ void srv_session::input_th(		connection_ptr m_client,
 	std::string player_name;
 
 	if (master)
-		player_name = "PLAYER1_NAME";
+		player_name = "PLAYER1_NAME:WAIT";
 	else
-		player_name = "PLAYER2_NAME";
+		player_name = "PLAYER2_NAME:WAIT";
 
 	p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
 	p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
 
+	player_name = "";
+
 	size_t battlefield_x = p1_model->get_primitive("battlefield")->get_x();
 	size_t battlefield_w = p1_model->get_primitive("battlefield")->get_w();
 
+	/*
 	p1_model->draw_primitive("bar");
 	p2_model->draw_primitive("shadow_bar");
 	p1_model->draw_primitive("player_name");
 	p2_model->draw_primitive("shadow_player_name");
-	
+	*/
+
 	int x_step = 0;
 
 	while (true)
@@ -123,26 +124,17 @@ void srv_session::input_th(		connection_ptr m_client,
 				}
 				default:
 				{
-					/*
 					if (m_state.load() == game_state::wait)
 					{
-						if (key_code >= 'A' && key_code <= 'z')
+						if (key_code >= '0' && key_code <= 'z')
 						{
-							if (player_name == "PLAYER1_NAME")
-								player_name = "";
-							if (player_name == "PLAYER2_NAME")
-								player_name = "";
-
-							player_name += ss.str();
+							player_name += ss.str() + ":WAIT";
 
 							p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
 							p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
-
-							p1_model->draw_primitive("player_name");
-							p2_model->draw_primitive("shadow_player_name");
 						}
 					}
-					*/
+					
 					continue;
 				}
 			}
@@ -173,8 +165,13 @@ void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
 	int x_step = (std::rand() % 2) ? 1 : -1;
 	int y_step = -1;
 
+	p1_model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
+	p2_model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
+
+	/*
 	p1_model->draw_primitive("ball");
 	p2_model->draw_primitive("shadow_ball");
+	*/
 
 	//Wait for players ready
 	m_p1_ready.wait(false);

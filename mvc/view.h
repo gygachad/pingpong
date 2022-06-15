@@ -36,7 +36,7 @@ public:
         std::vector<char_pixel> paint_points;
         paint_points.reserve(pixels.size());
 
-        for(const auto& point : pixels)
+        for (const auto& point : pixels)
         {
             size_t x;
             size_t y;

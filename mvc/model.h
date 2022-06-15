@@ -6,6 +6,7 @@
 #include <vector>
 #include <mutex>
 #include <map>
+#include <shared_mutex>
 
 #include "view.h"
 
@@ -24,9 +25,6 @@ public:
     virtual void move(size_t x, size_t y) = 0;
     virtual void get_data(paint_map& pixels) = 0;
     virtual void clean(paint_map& pixels) = 0;
-
-    template<typename... Args>
-    void set_data(Args... arguments) { }
 
     virtual ~IGui_primitive() {}
 
@@ -134,12 +132,12 @@ public:
     }
 };
 
-class bar : public IGui_primitive
+class line : public IGui_primitive
 {
     std::vector<point> m_mainfield;
 
 public:
-    bar(size_t x = 0, size_t y = 0, size_t len = 1, char c = '=')
+    line(size_t x = 0, size_t y = 0, size_t len = 1, char c = '\xC4')
     {
         m_x = x;
         m_y = y;
@@ -279,6 +277,7 @@ class model
 
     //std::map<primitive_types_en, primitive_ptr> gui_primitives;
     std::map<std::string, primitive_ptr> gui_primitives;
+    std::mutex m_primitives_lock;
 
     paint_map m_screenshot;
     view_ptr m_view;
@@ -290,22 +289,53 @@ public:
     template<typename T, typename... Args>
     bool create_primitive(const std::string& name, Args... arguments)
     {
-        //Clean up primitive data if it exist
-        if (gui_primitives.contains(name))
-            clean_primitive(name);
+        auto new_primitive = std::make_shared<T>(T(std::forward<Args>(arguments)...));
 
-        gui_primitives[name] = std::make_shared<T>(T(std::forward<Args>(arguments)...));
+        paint_map old_pixels;
+        paint_map diff_pixels;
+
+        new_primitive->get_data(diff_pixels);
+
+        std::unique_lock<std::mutex> lock(m_primitives_lock);
+
+        //calc diff
+        if (gui_primitives.contains(name))
+        {
+            auto old_primitive = gui_primitives[name];
+            old_primitive->get_data(old_pixels);
+            new_primitive->get_data(diff_pixels);
+
+            //Make diff
+            for (auto& p : old_pixels)
+            {
+                if (diff_pixels.contains(p.first))
+                {
+                    if (diff_pixels[p.first] == p.second)
+                        diff_pixels.erase(p.first);
+                }
+                else
+                {
+                    diff_pixels[p.first] = IGui_primitive::empty_char;
+                }
+            }
+        }
+
+        gui_primitives[name] = new_primitive;
+        m_view->paint(diff_pixels);
 
         return true;
     }
 
     auto get_primitive(const std::string& name)
     {
+        std::unique_lock<std::mutex> lock(m_primitives_lock);
         return gui_primitives[name];
     }
 
     void move_primitive(const std::string& name, size_t x, size_t y)
     {
+        std::unique_lock<std::mutex> lock(m_primitives_lock);
+
         //calc diff
         if (gui_primitives.contains(name))
         {
@@ -321,10 +351,15 @@ public:
             //Make diff
             for (auto& p : old_pixels)
             {
-                if (!diff_pixels.contains(p.first))
-                    diff_pixels[p.first] = IGui_primitive::empty_char;//empty
+                if (diff_pixels.contains(p.first))
+                {
+                    if (diff_pixels[p.first] == p.second)
+                        diff_pixels.erase(p.first);
+                }
                 else
-                    diff_pixels.erase(p.first);
+                {
+                    diff_pixels[p.first] = IGui_primitive::empty_char;
+                }
             }
 
             m_view->paint(diff_pixels);
@@ -337,6 +372,8 @@ public:
     
     void clean_primitive(const std::string& name)
     {
+        std::unique_lock<std::mutex> lock(m_primitives_lock);
+
         if (gui_primitives.contains(name))
         {
             paint_map pixels;
@@ -350,21 +387,10 @@ public:
         }
     }
 
-    template<typename... Args>
-    void set_primitive_data(const std::string& name, Args... arguments)
-    {
-        if (gui_primitives.contains(name))
-        {
-            gui_primitives[name]->set_data(std::forward<Args>(arguments)...);
-        }
-        else
-        {
-            //handle err
-        }
-    }
-
     void draw_primitive(const std::string& name)
     {
+        std::unique_lock<std::mutex> lock(m_primitives_lock);
+
         if (gui_primitives.contains(name))
         {
             paint_map pixels;

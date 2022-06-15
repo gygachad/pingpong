@@ -29,16 +29,17 @@ size_t connection::read(std::string& buffer)
 		std::error_code ec;
 		len = m_sock.receive(asio::buffer(recv_data), 0, ec);
 
+		if (ec.value())
+			return 0;
+
 		readed += len;
 
 		if (len)
 			buffer.append(recv_data, len);
 
-		if (buffer.find('\n') != std::string::npos)
-			return true;
-
-		if (ec.value())
-			return 0;
+		if (!buffer.empty())
+			if (buffer.back() == '\n')
+				return readed;
 	}
 
 	return readed;
