@@ -69,9 +69,12 @@ int main(int argc, const char* argv[])
         std::cout << "Usage: pingpong_client server_addr port_num" << std::endl;
         return 0;
     }
+    std::stringstream ss(argv[1]);
+
+    uint16_t port = 0;
+    ss >> port;
 
     std::string ip = std::string(argv[1]);
-    uint16_t port = atoi(argv[2]);
 
     asio::io_service io_srv;
 

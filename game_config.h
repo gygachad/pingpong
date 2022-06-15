@@ -1,5 +1,7 @@
 #pragma once
 
+#define BALL_TRESHOLD 50
+
 #define MAIN_FIELD_X 0
 #define MAIN_FIELD_Y 0
 #define MAIN_FIELD_W 25

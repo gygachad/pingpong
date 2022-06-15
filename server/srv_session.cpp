@@ -1,51 +1,39 @@
 ﻿#include <ctime>
+#include <climits>
 
 #include "..\game_config.h"
 #include "srv_session.h"
 
-void srv_session::init_gui(model_ptr model)
+srv_session::srv_session(connection_ptr master, connection_ptr slave)
 {
-	model->create_primitive<rectangle>("battlefield",	MAIN_FIELD_X, MAIN_FIELD_Y,
-														MAIN_FIELD_W, MAIN_FIELD_H);
+	m_p1_client = master;
+	m_p2_client = slave;
 
-	model->create_primitive<line>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN, '=');
-	model->create_primitive<line>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN, '=');
+	m_player1 = make_shared<player>(m_p1_client, "player1", "player2");
+	m_player2 = make_shared<player>(m_p2_client, "player2", "player1");
 }
 
 void srv_session::start_game()
 {
-	net_view_ptr player1_view = make_shared<network_view>(m_p1_client);
-	net_view_ptr player2_view = make_shared<network_view>(m_p2_client);
-
-	model_ptr player1_model = make_shared<model>(player1_view);
-	model_ptr player2_model = make_shared<model>(player2_view);
-
 	m_state.store(game_state::wait);
 
-	init_gui(player1_model);
-	init_gui(player2_model);
-
-	m_paint_th = std::thread(&srv_session::paint_th, this, player1_model, player2_model);
-	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_model, player2_model, true);
-	m_p2_input_th = std::thread(&srv_session::input_th, this, m_p2_client, player2_model, player1_model, false);
+	m_paint_th = std::thread(&srv_session::paint_th, this, m_player1, m_player2);
+	m_p1_input_th = std::thread(&srv_session::input_th, this, m_player1, m_player2, true);
+	m_p2_input_th = std::thread(&srv_session::input_th, this, m_player2, m_player1, false);
 }
 
-void srv_session::input_th(		connection_ptr m_client, 
-								model_ptr p1_model,
-								model_ptr p2_model, bool master)
+void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 {
 	std::string buffer;
-	std::string player_name;
+	std::string custom_player_name = "";
 
-	if (master)
-		player_name = "player1:wait";
-	else
-		player_name = "player2:wait";
+	auto p1_model = player1->get_model();
+	auto p2_model = player2->get_model();
 
-	p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
-	p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
+	auto player_connection = player1->get_connection();
 
-	player_name = "";
+	player1->change_player_state(game_state::wait);
+	player1->change_shadow_player_state(game_state::wait);
 
 	size_t battlefield_x = p1_model->get_primitive("battlefield")->get_x();
 	size_t battlefield_w = p1_model->get_primitive("battlefield")->get_w();
@@ -55,7 +43,7 @@ void srv_session::input_th(		connection_ptr m_client,
 	while (true)
 	{
 		//Check if socket alive
-		size_t len = m_client->read(buffer);
+		size_t len = player_connection->read(buffer);
 		
 		if (len == 0)
 		{
@@ -94,45 +82,23 @@ void srv_session::input_th(		connection_ptr m_client,
 				}
 				case KEY_SPACEBAR:
 				{
-					if (master)
-					{
-						m_p1_ready.test_and_set();
-						m_p1_ready.notify_one();
-					}
-					else
-					{
-						m_p2_ready.test_and_set();
-						m_p2_ready.notify_one();
-					}
-
-					p1_model->create_primitive<text_box>(	"player_name",
-															MAIN_PLAYERNAME_FIELD_X,
-															MAIN_PLAYERNAME_FIELD_Y,
-															player_name + ":ready");
-					p2_model->create_primitive<text_box>(	"shadow_player_name",
-															SHADOW_PLAYER_NAME_FIELD_X,
-															SHADOW_PLAYER_NAME_FIELD_Y,
-															player_name + ":ready");
+					player2->change_shadow_player_state(game_state::ready);
+					player1->change_player_state(game_state::ready);
 					continue;
 				}
 				default:
 				{
-					if (m_state.load() == game_state::wait)
+					if (player1->m_state.load() == game_state::wait)
 					{
-						if (player_name.length() < 10)
+						if (custom_player_name.length() < 10)
 						{
 							if (key_code >= 'a' && key_code <= 'z')
 							{
-								player_name += char(key_code);
+								custom_player_name += char(key_code);
 
-								p1_model->create_primitive<text_box>(	"player_name", 
-																		MAIN_PLAYERNAME_FIELD_X, 
-																		MAIN_PLAYERNAME_FIELD_Y, 
-																		player_name + ":wait");
-								p2_model->create_primitive<text_box>(	"shadow_player_name", 
-																		SHADOW_PLAYER_NAME_FIELD_X, 
-																		SHADOW_PLAYER_NAME_FIELD_Y, 
-																		player_name + ":wait");
+								//update names on screen
+								player1->set_name(custom_player_name);
+								player2->set_shadow_name(custom_player_name);
 							}
 						}
 					}
@@ -159,7 +125,7 @@ void srv_session::input_th(		connection_ptr m_client,
 	}
 }
 
-void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
+void srv_session::paint_th(player_ptr player1, player_ptr player2)
 {
 	std::string buffer;
 
@@ -167,35 +133,104 @@ void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
 	int x_step = (std::rand() % 2) ? 1 : -1;
 	int y_step = -1;
 
+	auto p1_model = player1->get_model();
+	auto p2_model = player2->get_model();
+
 	p1_model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
 	p2_model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
 
 	//Wait for players ready
-	m_p1_ready.wait(false);
-	m_p2_ready.wait(false);
+	player1->wait_for_ready();
+	player2->wait_for_ready();
 
-	m_state = game_state::start;
+	//Player fell of before start
+	if (player1->m_state.load() == game_state::stop ||
+		player2->m_state.load() == game_state::stop)
+		return;
+
+	//Add graphic counter
+	//std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(3000));
+
+	player1->change_player_state(game_state::start);
+	player2->change_player_state(game_state::start);
+	player1->change_shadow_player_state(game_state::start);
+	player2->change_shadow_player_state(game_state::start);
 
 	size_t x = p1_model->get_primitive("ball")->get_x();
 	size_t y = p1_model->get_primitive("ball")->get_y();
 
+	m_state.store(game_state::start);
+
+	auto p1_bar = p1_model->get_primitive("bar");
+	auto p2_bar = p1_model->get_primitive("shadow_bar");
+	
+	bool change_angle = false;
+
 	while (true)
 	{
 		//Check game status
-		if (m_state == game_state::stop)
+		if (m_state.load() == game_state::stop)
 			break;
 
-		if (x == MAIN_FIELD_W - 2)
+		size_t bar_x = 0;
+		size_t bar_w = 0;
+
+		if (y <= MAIN_FIELD_Y + 2)
+		{
+			bar_x = p2_bar->get_x();
+			bar_w = p2_bar->get_w();
+
+			if (x < bar_x ||
+				x >= bar_x + bar_w)
+			{
+				player2->add_goal();
+				player1->add_shadow_goal();
+			}
+			else
+			{
+				change_angle = true;
+			}
+			y_step = 1;
+		}
+
+		if (y >= MAIN_FIELD_H - 3)
+		{
+			bar_x = p1_bar->get_x();
+			bar_w = p1_bar->get_w();
+
+			if (x < bar_x ||
+				x >= bar_x + bar_w)
+			{
+				player1->add_goal();
+				player2->add_shadow_goal();
+			}
+			else
+			{
+				change_angle = true;
+			}
+			y_step = -1;
+		}
+
+		if (change_angle)
+		{
+			if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
+			{
+				if (x >= 2 && MAIN_FIELD_W - 2)
+					x_step = x_step * 2;
+			}
+			if ((bar_x == x) || (bar_x + bar_w - 1 == x))
+			{
+				if (x >= 3 && x < MAIN_FIELD_W - 3)
+					x_step = x_step * 3;
+			}
+			change_angle = false;
+		}
+
+		if (x + x_step >= MAIN_FIELD_W - 1)
 			x_step = -1;
 
-		if (y == MAIN_FIELD_Y + 2)
-			y_step = 1;
-
-		if (x == MAIN_FIELD_X + 1)
+		if (x + x_step <= MAIN_FIELD_X)
 			x_step = 1;
-
-		if (y == MAIN_FIELD_H - 3)
-			y_step = -1;
 
 		x += x_step;
 		y += y_step;
@@ -204,7 +239,7 @@ void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
 		//Mirror shadow primitive moves
 		p2_model->move_primitive("shadow_ball", -x_step, -y_step);
 
-		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
+		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(BALL_TRESHOLD));
 	}
 }
 
@@ -220,12 +255,10 @@ void srv_session::wait_end()
 {
 	m_stop_game.wait(false);
 
-	m_state.store(game_state::stop);
+	m_player1->change_player_state(game_state::stop);
+	m_player2->change_player_state(game_state::stop);
 
-	m_p1_ready.test_and_set();
-	m_p1_ready.notify_one();
-	m_p2_ready.test_and_set();
-	m_p2_ready.notify_one();
+	m_state.store(game_state::stop);
 
 	m_p1_client->disconnect();
 	m_p2_client->disconnect();
