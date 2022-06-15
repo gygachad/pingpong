@@ -4,7 +4,7 @@ void server::session_th(session_ptr session)
 {
 	log << "Start game\r\n";
 	{
-		lock_guard<mutex> lock(m_ss_list_lock);
+		std::lock_guard<std::mutex> lock(m_ss_list_lock);
 		m_session_list.push_back(session);
 	}
 
@@ -15,12 +15,12 @@ void server::session_th(session_ptr session)
 	log << "Delete session\r\n";
 
 	{
-		lock_guard<mutex> lock(m_ss_list_lock);
+		std::lock_guard<std::mutex> lock(m_ss_list_lock);
 		m_session_list.remove(session);
 	}
 }
 
-void server::accept_handler(const error_code& error,
+void server::accept_handler(const std::error_code& error,
 							connection_ptr new_client,
 							asio::ip::tcp::acceptor& acceptor)
 {
@@ -30,7 +30,7 @@ void server::accept_handler(const error_code& error,
 	log << "New client connected\r\n";
 
 	{
-		std::unique_lock<mutex> lock(m_cl_lock);
+		std::unique_lock<std::mutex> lock(m_cl_lock);
 
 		if (m_wait_client_list.size() >= 1)
 		{
@@ -38,6 +38,7 @@ void server::accept_handler(const error_code& error,
 			m_wait_client_list.pop_front();
 
 			//Check - if wait client alive
+
 			session_ptr new_session = make_shared<srv_session>(wait_client, new_client);
 
 			std::thread th = std::thread(&server::session_th, this, new_session);
@@ -94,7 +95,7 @@ bool server::start()
 	m_started = true;
 
 	log << "Start server thread\r\n";
-	m_server_th = thread(&server::server_thread, this);
+	m_server_th = std::thread(&server::server_thread, this);
 	return true;
 }
 
@@ -111,7 +112,7 @@ void server::stop()
 		connection_ptr client;
 
 		{
-			lock_guard<mutex> lock(m_cl_lock);
+			std::lock_guard<std::mutex> lock(m_cl_lock);
 
 			if (m_wait_client_list.empty())
 				break;
@@ -130,7 +131,7 @@ void server::stop()
 		thread_ptr session_th;
 
 		{
-			lock_guard<mutex> lock(m_ss_list_lock);
+			std::lock_guard<std::mutex> lock(m_ss_list_lock);
 
 			if (m_session_list.empty())
 				break;

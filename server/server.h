@@ -51,6 +51,8 @@ class server
 	std::list<connection_ptr> m_wait_client_list;
 	std::mutex m_cl_lock;
 
+	std::map<session_ptr, std::thread> m_session_pool;
+
 	std::list<session_ptr> m_session_list;
 	std::mutex m_ss_list_lock;
 
@@ -64,7 +66,7 @@ class server
 
 	void session_th(session_ptr session);
 
-	void accept_handler(const error_code& error,
+	void accept_handler(const std::error_code& error,
 						connection_ptr new_client,
 						asio::ip::tcp::acceptor& acceptor);
 

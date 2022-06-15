@@ -8,30 +8,31 @@ namespace str_tool
 	// ("11.", '.') -> ["11", ""]
 	// (".11", '.') -> ["", "11"]
 	// ("11.22", '.') -> ["11", "22"]
-	vector<string> split(const string& str, string_view delimiter)
+	std::vector<std::string> split(const std::string& str, std::string_view delimiter)
 	{		
-		string str_copy = str;
+		std::string str_copy = str;
 
-		vector<string> result;
+		std::vector<std::string> result;
 
 		size_t pos = 0;
-		string token;
-		while ((pos = str_copy.find(delimiter)) != string::npos)
+		std::string token;
+		while ((pos = str_copy.find(delimiter)) != std::string::npos)
 		{
 			token = str_copy.substr(0, pos);
 			result.push_back(token);
 			str_copy.erase(0, pos + delimiter.length());
 		}
 
-		result.push_back(str_copy);
+		if(!str_copy.empty())
+			result.push_back(str_copy);
 
 		return result;
 	}
 
-	size_t replace_all(string& inout, string_view what, string_view with)
+	size_t replace_all(std::string& inout, std::string_view what, std::string_view with)
 	{
 		size_t count{};
-		for (string::size_type pos{};
+		for (std::string::size_type pos{};
 			inout.npos != (pos = inout.find(what.data(), pos, what.length()));
 			pos += with.length(), ++count)
 		{

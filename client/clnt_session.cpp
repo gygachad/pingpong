@@ -1,4 +1,6 @@
 #include <conio.h>
+#include <map>
+#include <sstream>
 
 #include "..\mvc\screen_view.h"
 #include "..\str_tool.h"
@@ -10,7 +12,7 @@
 #define KEY_RIGHT 77
 #define SPACEBAR 32
 
-void clnt_session::start_game(/*Game options????*/)
+void clnt_session::start_game()
 {
 	m_paint_th = std::thread(&clnt_session::paint_th, this);
 	m_input_th = std::thread(&clnt_session::input_th, this);
@@ -18,75 +20,76 @@ void clnt_session::start_game(/*Game options????*/)
 
 void clnt_session::input_th()
 {
-	string s;
+	std::map<int, std::string> m_keymap = {	{KEY_LEFT , "L\n"}, 
+											{KEY_RIGHT, "R\n"}, 
+											{SPACEBAR, "S\n"}};
+
+	std::stringstream ss;
 
 	while (true)
 	{
-		switch (_getch())
-		{
-		case KEY_LEFT:
-		{
-			s = "L\n";
-			break;
-		}
-		case KEY_RIGHT:
-		{
-			s = "R\n";
-			break;
-		}
-		case SPACEBAR:
-		{
-			s = "S\n";
-			break;
-		}
-		default:
-			continue;
-		}
+		int c = _getch();
+		ss << c << "\n";
+		
+		size_t len = m_srv.write(ss.str());
 
-		m_srv.write(s);
+		if (len == 0)
+			break;
+
+		//Clear string stream
+		ss.str("");
 	}
 }
 
 void clnt_session::paint_th()
 {
 	std::string buffer;
-	stringstream ss;
+	std::stringstream ss;
 	screen_view scr;
 
 	scr.screen_init();
 	scr.cls();
 	scr.set_offset(1, 1);
+	
+	std::vector<char_pixel> paint_pixel;
 
 	while (true)
 	{
-		m_srv.read(buffer);
+		size_t len = m_srv.read(buffer);
 
-		std::vector<string> cmd_line = str_tool::split(buffer, "\n");
+		if (len == 0)
+			break;
+
+		paint_pixel.clear();
+
+		std::vector<std::string> cmd_line = str_tool::split(buffer, "\n");
 
 		for (const auto& cmd : cmd_line)
 		{
-			std::vector<string> paint_cmd = str_tool::split(cmd, ";");
+			std::vector<std::string> paint_cmd = str_tool::split(cmd, ";");
 
 			if (paint_cmd.size() != 3)
 				continue;
 
 			size_t x = 0;
-			ss = stringstream(paint_cmd[0]);
+			ss = std::stringstream(paint_cmd[0]);
 			ss >> x;
 
 			size_t y = 0;
-			ss = stringstream(paint_cmd[1]);
+			ss = std::stringstream(paint_cmd[1]);
 			ss >> y;
 
 			char c = 0;
-			ss = stringstream(paint_cmd[2]);
+			ss = std::stringstream(paint_cmd[2]);
 			ss >> c;
 
 			if (c == 0)
 				c = ' ';
 
-			scr.make_paint(x, y, c);
+			paint_pixel.emplace_back(char_pixel(x, y, c));
 		}
+
+		scr.make_paint(paint_pixel);
 	}
 }
 

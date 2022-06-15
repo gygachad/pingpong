@@ -12,17 +12,12 @@
 #include <conio.h>
 
 #include "..\mvc\model.h"
-#include "..\mvc\controller.h"
 #include "..\mvc\screen_view.h"
 #include "..\connection.h"
 
 #include "clnt_session.h"
 
-#define KEY_UP 72
-#define KEY_DOWN 80
-#define KEY_LEFT 75
-#define KEY_RIGHT 77
-
+/*
 void move_ball_th(controller& ctrl)
 {
     model mdl;
@@ -61,11 +56,6 @@ void move_ball_th(controller& ctrl)
         y += y_step;
 
         ctrl.move(ball, x - ball->get_x(), y - ball->get_y());
-        /*
-        ball->clean();
-        ball->move(x - ball->get_x(), y - ball->get_y());
-        ball->draw();
-        */
     }
 }
 
@@ -106,14 +96,9 @@ void get_button_th(controller& ctrl)
         }
 
         ctrl.move(space_bar, x - space_bar->get_x(), 0);
-        
-        /*
-        space_bar->clean();
-        space_bar->move(x - space_bar->get_x(), 0);
-        space_bar->draw();
-        */
     }
 }
+*/
 
 void set_console_mode()
 {
@@ -175,7 +160,8 @@ int main(int argc, const char* argv[])
 
     connection clnt(io_srv);
 
-    clnt.connect(ip, port);
+    if (!clnt.connect(ip, port))
+        return 0;
     
     clnt_session session(clnt);
 

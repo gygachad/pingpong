@@ -3,10 +3,8 @@
 #include <string>
 #include <string_view>
 
-using namespace std;
-
 namespace str_tool
 {
-	vector<string> split(const string& str, string_view delimiter);
-	size_t replace_all(string& inout, string_view what, string_view with);
+	std::vector<std::string> split(const std::string& str, std::string_view delimiter);
+	size_t replace_all(std::string& inout, std::string_view what, std::string_view with);
 }

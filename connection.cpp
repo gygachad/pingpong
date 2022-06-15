@@ -5,8 +5,12 @@ bool connection::connect(const std::string& ip, const uint16_t port)
 	asio::ip::tcp::endpoint ep(asio::ip::address::from_string(ip), port);
 	m_sock = asio::ip::tcp::socket(m_io_service);
 	
-	m_sock.connect(ep);
-	m_connected = true;
+	std::error_code ec;
+
+	m_sock.connect(ep, ec);
+
+	if (ec.value())
+		return false;
 
 	return true;
 }
@@ -54,9 +58,10 @@ size_t connection::write(const std::string& str)
 
 void connection::disconnect()
 {
-	error_code ec = asio::error::connection_aborted;
-	m_sock.close(ec);
-	m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-
-	m_connected = false;
+	if (m_sock.is_open())
+	{
+		std::error_code ec = asio::error::connection_aborted;
+		m_sock.close(ec);
+		m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+	}
 }

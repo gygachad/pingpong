@@ -12,13 +12,11 @@ class connection
 	asio::io_service& m_io_service;
 	asio::ip::tcp::socket m_sock;
 
-	bool m_connected = false;
-
 public:
 	using connection_ptr = std::shared_ptr<connection>;
 
 	connection(asio::io_service& io_service):m_io_service(io_service), m_sock(io_service){}
-	~connection() {}
+	~connection() { disconnect(); }
 
 	asio::ip::tcp::socket& socket() { return m_sock; }
 

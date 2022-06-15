@@ -1,183 +1,217 @@
-﻿#include "srv_session.h"
+﻿#include <ctime>
+
 #include "..\game_config.h"
+#include "srv_session.h"
 
-void srv_session::init_gui()
+void srv_session::init_gui(model_ptr model)
 {
-	m_gui_model.create_primitive<rectangle>("battlefield",	PPP_MAIN_FIELD_X, PPP_MAIN_FIELD_Y, 
-															PPP_MAIN_FIELD_W, PPP_MAIN_FIELD_H);
+	model->create_primitive<rectangle>("battlefield",	MAIN_FIELD_X, MAIN_FIELD_Y,
+														MAIN_FIELD_W, MAIN_FIELD_H);
 
-	m_gui_model.create_primitive<bar>("p1_bar", PPP_M_BAR_X, PPP_M_BAR_Y, PPP_BAR_LEN);
-	m_gui_model.create_primitive<bar>("p1_shadow_bar", PPP_S_BAR_X, PPP_S_BAR_Y, PPP_BAR_LEN);
+	model->create_primitive<bar>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN);
+	model->create_primitive<bar>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN);
+	model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
+	model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
 
-	m_gui_model.create_primitive<bar>("p2_bar", PPP_M_BAR_X, PPP_M_BAR_Y, PPP_BAR_LEN);
-	m_gui_model.create_primitive<bar>("p2_shadow_bar", PPP_S_BAR_X, PPP_S_BAR_Y, PPP_BAR_LEN);
-
-	m_gui_model.create_primitive<point>("ball", PPP_M_BALL_X, PPP_M_BALL_Y, 'O');
-	m_gui_model.create_primitive<point>("shadow_ball", PPP_S_BALL_X, PPP_S_BALL_Y, 'O');
+	//model->create_primitive<text_box>("player1_score",	PPP_SCOREBAR_FIELD_X, PPP_SCOREBAR_FIELD_Y, "0");
+	//model->create_primitive<text_box>("player2_score", PPP_SCOREBAR_FIELD_X, PPP_SCOREBAR_FIELD_Y, "0");
 }
 
-void srv_session::start_game(/*Game options????*/)
+void srv_session::start_game()
 {
 	net_view_ptr player1_view = make_shared<network_view>(m_p1_client);
 	net_view_ptr player2_view = make_shared<network_view>(m_p2_client);
 
-	controller_ptr player1_ctrl = make_shared<controller>(player1_view);
-	controller_ptr player2_ctrl = make_shared<controller>(player2_view);
+	model_ptr player1_model = make_shared<model>(player1_view);
+	model_ptr player2_model = make_shared<model>(player2_view);
 
-	init_gui();
+	m_state.store(game_state::wait);
 
-	//Draw all primitivies
-	auto battlefield = m_gui_model.get_primitive("battlefield");
+	init_gui(player1_model);
+	init_gui(player2_model);
 
-	player1_ctrl->draw(battlefield);
-	player2_ctrl->draw(battlefield);
+	player1_model->draw_primitive("battlefield");
+	player2_model->draw_primitive("battlefield");
 
-	m_paint_th = std::thread(&srv_session::paint_th, this, player1_ctrl, player2_ctrl);
-	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_ctrl, player2_ctrl, true);
-	m_p2_input_th = std::thread(&srv_session::input_th, this, m_p2_client, player2_ctrl, player1_ctrl, false);
+	m_paint_th = std::thread(&srv_session::paint_th, this, player1_model, player2_model);
+	m_p1_input_th = std::thread(&srv_session::input_th, this, m_p1_client, player1_model, player2_model, true);
+	m_p2_input_th = std::thread(&srv_session::input_th, this, m_p2_client, player2_model, player1_model, false);
 }
 
 void srv_session::input_th(		connection_ptr m_client, 
-								controller_ptr p1_ctrl,
-								controller_ptr p2_ctrl, bool master)
+								model_ptr p1_model,
+								model_ptr p2_model, bool master)
 {
-	string buffer = "";
+	std::string buffer;
+	std::string player_name;
 
-	auto main_play_bar = m_gui_model.get_primitive("p1_bar");
-	auto shadow_play_bar = m_gui_model.get_primitive("p1_shadow_bar");
+	if (master)
+		player_name = "PLAYER1_NAME";
+	else
+		player_name = "PLAYER2_NAME";
 
-	//??????
-	if (!master)
-	{
-		main_play_bar = m_gui_model.get_primitive("p2_bar");
-		shadow_play_bar = m_gui_model.get_primitive("p2_shadow_bar");
-	}
+	p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
+	p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
 
-	auto ball = m_gui_model.get_primitive("ball");
-	auto shadow_ball = m_gui_model.get_primitive("shadow_ball");
+	size_t battlefield_x = p1_model->get_primitive("battlefield")->get_x();
+	size_t battlefield_w = p1_model->get_primitive("battlefield")->get_w();
 
+	p1_model->draw_primitive("bar");
+	p2_model->draw_primitive("shadow_bar");
+	p1_model->draw_primitive("player_name");
+	p2_model->draw_primitive("shadow_player_name");
+	
 	int x_step = 0;
-
-	p1_ctrl->draw(main_play_bar);
-	p2_ctrl->draw(shadow_play_bar);
 
 	while (true)
 	{
 		size_t len = m_client->read(buffer);
 		
 		if (len == 0)
-			break;
-
-		char client_input = buffer[0];
-
-		switch(client_input)
-		{
-			case 'L':
-			{
-				if (main_play_bar->get_x() > PPP_MAIN_FIELD_X + 1)
-					x_step = -1;
-				else
-					continue;
-
-				break;
-			}
-			case 'R':
-			{
-				if (main_play_bar->get_x() < PPP_MAIN_FIELD_W - PPP_BAR_LEN - 1)
-					x_step = 1;
-				else
-					continue;
-
-				break;
-			}
-			case 'E':
-			{
-				continue;
-			}
-			case 'S':
-			{
-				/*
-				if (master)
-				{
-					m_p1_ready.test_and_set();
-					m_p1_ready.notify_one();
-				}
-				else
-				{
-					m_p1_ready.test_and_set();
-					m_p1_ready.notify_one();
-				}
-				*/
-				continue;
-			}
-			default:
-				continue;
-		}
-
-		p1_ctrl->move(main_play_bar, x_step, 0);
-		//Mirror shadow primitive moves
-		p2_ctrl->move(shadow_play_bar, -x_step, 0);
-		/*
-		//Move ball until game not started
-		if (m_state != game_state::start)
-		{
-			p1_ctrl->move(ball, x_step, 0);
-			//Mirror shadow primitive moves
-			p2_ctrl->move(shadow_ball, -x_step, 0);
-		}
-		*/
-	}
-
-	m_state = game_state::end;
-}
-
-void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
-{
-	string buffer;
-
-	auto main_ball = m_gui_model.get_primitive("ball");
-	auto shadow_ball = m_gui_model.get_primitive("shadow_ball");
-
-	size_t x = PPP_M_BALL_X;
-	size_t y = PPP_M_BALL_Y;
-
-	int x_step = 1;
-	int y_step = -1;
-
-	p1_ctrl->draw(main_ball);
-	p2_ctrl->draw(shadow_ball);
-
-	//Wait for players ready
-	//m_p1_ready.wait(false);
-	//m_p2_ready.wait(false);
-
-	while (true)
-	{
-		//Check game status
-		if (m_state == game_state::end)
 		{
 			stop_game();
 			break;
 		}
 
-		if (x == PPP_MAIN_FIELD_W - 2)
+		std::vector<std::string> input_vec = str_tool::split(buffer, "\n");
+
+		for (const std::string& cmd : input_vec)
+		{
+			std::stringstream ss(cmd);
+
+			int key_code = 0;
+			ss >> key_code;
+
+			switch (key_code)
+			{
+				case KEY_LEFT:
+				{
+					if (p1_model->get_primitive("bar")->get_x() > battlefield_x + 1)
+						x_step = -1;
+					else
+						continue;
+
+					break;
+				}
+				case KEY_RIGHT:
+				{
+					if (p1_model->get_primitive("bar")->get_x() < battlefield_w - BAR_LEN - 1)
+						x_step = 1;
+					else
+						continue;
+
+					break;
+				}
+				case 'E':
+				{
+					continue;
+				}
+				case KEY_SPACEBAR:
+				{
+					if (master)
+					{
+						m_p1_ready.test_and_set();
+						m_p1_ready.notify_one();
+					}
+					else
+					{
+						m_p2_ready.test_and_set();
+						m_p2_ready.notify_one();
+					}
+
+					continue;
+				}
+				default:
+				{
+					/*
+					if (m_state.load() == game_state::wait)
+					{
+						if (key_code >= 'A' && key_code <= 'z')
+						{
+							if (player_name == "PLAYER1_NAME")
+								player_name = "";
+							if (player_name == "PLAYER2_NAME")
+								player_name = "";
+
+							player_name += ss.str();
+
+							p1_model->create_primitive<text_box>("player_name", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, player_name);
+							p2_model->create_primitive<text_box>("shadow_player_name", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, player_name);
+
+							p1_model->draw_primitive("player_name");
+							p2_model->draw_primitive("shadow_player_name");
+						}
+					}
+					*/
+					continue;
+				}
+			}
+
+			p1_model->move_primitive("bar", x_step, 0);
+			//Mirror shadow primitive moves
+			p2_model->move_primitive("shadow_bar", -x_step, 0);
+
+			if (master)
+			{
+				//Move ball until game not started
+				if (m_state.load() != game_state::start)
+				{
+					p1_model->move_primitive("ball", x_step, 0);
+					//Mirror shadow primitive moves
+					p2_model->move_primitive("shadow_ball", -x_step, 0);
+				}
+			}
+		}
+	}
+}
+
+void srv_session::paint_th(model_ptr p1_model, model_ptr p2_model)
+{
+	std::string buffer;
+
+	std::srand(std::time(nullptr));
+	int x_step = (std::rand() % 2) ? 1 : -1;
+	int y_step = -1;
+
+	p1_model->draw_primitive("ball");
+	p2_model->draw_primitive("shadow_ball");
+
+	//Wait for players ready
+	m_p1_ready.wait(false);
+	m_p2_ready.wait(false);
+
+	m_state = game_state::start;
+
+	size_t x = p1_model->get_primitive("ball")->get_x();
+	size_t y = p1_model->get_primitive("ball")->get_y();
+
+	while (true)
+	{
+		//Check game status
+		if (m_state == game_state::stop)
+			break;
+
+		if (x == MAIN_FIELD_W - 2)
 			x_step = -1;
 
-		if (y == PPP_MAIN_FIELD_Y + 2)
+		if (y == MAIN_FIELD_Y + 2)
 			y_step = 1;
 
-		if (x == PPP_MAIN_FIELD_X + 1)
+		if (x == MAIN_FIELD_X + 1)
 			x_step = 1;
 
-		if (y == PPP_MAIN_FIELD_H - 3)
+		if (y == MAIN_FIELD_H - 3)
 			y_step = -1;
 
 		x += x_step;
 		y += y_step;
 
-		p1_ctrl->move(main_ball, x_step, y_step);
+		p1_model->move_primitive("ball", x_step, y_step);
 		//Mirror shadow primitive moves
-		p2_ctrl->move(shadow_ball, -x_step, -y_step);
+		p2_model->move_primitive("shadow_ball", -x_step, -y_step);
+
+		//lock
+		//m_view.paint
 
 		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(100));
 	}
@@ -185,20 +219,26 @@ void srv_session::paint_th(controller_ptr p1_ctrl, controller_ptr p2_ctrl)
 
 void srv_session::stop_game()
 {
-	m_state = game_state::end;
+	m_state.store(game_state::stop);
 
-	/*
-	m_p1_ready.test_and_set();
-	m_p1_ready.notify_one();
-	m_p1_ready.test_and_set();
-	m_p1_ready.notify_one();
-	*/
-	m_p1_client->disconnect();
-	m_p2_client->disconnect();
+	m_stop_game.test_and_set();
+	m_stop_game.notify_one();
 }
 
 void srv_session::wait_end()
 {
+	m_stop_game.wait(false);
+
+	m_state.store(game_state::stop);
+
+	m_p1_ready.test_and_set();
+	m_p1_ready.notify_one();
+	m_p2_ready.test_and_set();
+	m_p2_ready.notify_one();
+
+	m_p1_client->disconnect();
+	m_p2_client->disconnect();
+
 	if (m_paint_th.joinable())
 		m_paint_th.join();
 	

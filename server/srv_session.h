@@ -7,53 +7,49 @@
 #include <asio.hpp>
 
 #include "..\connection.h"
-#include "..\mvc\controller.h"
 #include "..\mvc\network_view.h"
+#include "..\mvc\model.h"
 #include "..\game_config.h"
 
 enum class game_state
 {
 	wait,
 	start,
-	end
+	stop
 };
 
 class srv_session
 {
-	using controller_ptr = std::shared_ptr<controller>;
+	using model_ptr = std::shared_ptr<model>;
 	using net_view_ptr = std::shared_ptr<network_view>;
 	using connection_ptr = std::shared_ptr<connection>;
+	using session_ptr = std::shared_ptr<srv_session>;
 
 	std::thread m_paint_th;
-
 	std::thread m_p1_input_th;
 	std::thread m_p2_input_th;
 
 	connection_ptr m_p1_client;
 	connection_ptr m_p2_client;
-
-	//mutex lock for main model??
-	model m_gui_model;
 	
+	//Syncronization
 	std::atomic_flag m_p1_ready;
 	std::atomic_flag m_p2_ready;
-	
-	game_state m_state = game_state::wait;
+	std::atomic_flag m_stop_game;
+	std::atomic<game_state> m_state;
 
 public:
 	srv_session(	connection_ptr master, connection_ptr slave) :
 					m_p1_client(master),
 					m_p2_client(slave) {}
 
-	void init_gui();
-	auto get_primitive(const string& name);
-
-	void start_game(/*Game options????*/);
-	void paint_th(	controller_ptr master_ctrl, controller_ptr slave_ctrl);
+	void init_gui(	model_ptr model);
+	void paint_th(	model_ptr p1_model, model_ptr p2_model);
 	void input_th(	connection_ptr m_client,
-					controller_ptr m_ctrl,
-					controller_ptr s_ctrl, bool master);
+					model_ptr p1_model,
+					model_ptr p2_model, bool master);
 
+	void start_game();
 	void wait_end();
 	void stop_game();
 

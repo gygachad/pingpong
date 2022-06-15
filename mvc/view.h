@@ -7,15 +7,24 @@
 #include <functional>
 #include <mutex>
 
+struct char_pixel
+{
+    size_t m_x;
+    size_t m_y;
+    char m_c;
+
+    char_pixel(size_t x, size_t y, char c) : m_x(x), m_y(y), m_c(c) {}
+};
+
 class view
 {
     std::mutex m_screen_lock;
-    std::map<std::pair<size_t, size_t>, char> m_screen_snapshot;
+    using paint_map = std::map<std::pair<size_t, size_t>, char>;
 
-    virtual void make_paint(size_t x, size_t y, char c) = 0;
+    virtual void make_paint(const size_t x, const size_t y, const char c) = 0;
+    virtual void make_paint(const std::vector<char_pixel>& paint_char_pixels) = 0;
 
 public:
-    using paint_map = std::map<std::pair<size_t, size_t>, char>;
 
     view() { }
 
@@ -24,28 +33,21 @@ public:
 
     void paint(const paint_map& pixels)
     {
+        std::vector<char_pixel> paint_points;
+        paint_points.reserve(pixels.size());
+
+        for(const auto& point : pixels)
         {
-            //make shared lock??
-            std::lock_guard<std::mutex> lock(m_screen_lock);
+            size_t x;
+            size_t y;
+            std::tie(x, y) = point.first;
+            char c = point.second;
 
-            for(const auto& point : pixels)
-            {
-                if (m_screen_snapshot.contains(point.first))
-                {
-                    if (m_screen_snapshot[point.first] == point.second)
-                        continue;
-                }
-
-                size_t x;
-                size_t y;
-                std::tie(x, y) = point.first;
-
-                m_screen_snapshot[point.first] = point.second;
-
-                //Call specific handler
-                make_paint(x, y, point.second);
-            }
+            paint_points.emplace_back(char_pixel(x, y, c));
         }
+
+        //Call specific handler
+        make_paint(paint_points);
     }
 
     virtual ~view() { }

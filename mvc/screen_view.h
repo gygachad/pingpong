@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <vector>
 
 #include "view.h"
 
@@ -25,11 +26,20 @@ public:
         std::cout << "\x1B[2J";
     }
 
-    void make_paint(size_t x, size_t y, char c) override
+    void make_paint(const size_t x, const size_t y, const char c) override
     {
         std::stringstream ss;
-
         ss << "\x1B[" << y_offset + y << ";" << x_offset + x << "H";
         std::cout << ss.str() << c;
+    }
+
+    void make_paint(const std::vector<char_pixel>& char_pixels) override
+    {
+        std::stringstream ss;
+        for (const char_pixel& p : char_pixels)
+        {
+            ss << "\x1B[" << y_offset + p.m_y << ";" << x_offset + p.m_x << "H";
+            std::cout << ss.str() << p.m_c;
+        }
     }
 };
