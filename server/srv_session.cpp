@@ -130,7 +130,8 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	std::string buffer;
 
 	std::srand(std::time(nullptr));
-	int x_step = (std::rand() % 2) ? 1 : -1;
+	//int x_step = (std::rand() % 2) ? 1 : -1;
+	int x_step = -1;
 	int y_step = -1;
 
 	auto p1_model = player1->get_model();
@@ -158,12 +159,13 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 
 	size_t x = p1_model->get_primitive("ball")->get_x();
 	size_t y = p1_model->get_primitive("ball")->get_y();
+	size_t shadow_x = p2_model->get_primitive("shadow_ball")->get_x();
 
 	m_state.store(game_state::start);
 
 	auto p1_bar = p1_model->get_primitive("bar");
-	auto p2_bar = p2_model->get_primitive("shadow_bar");
-	
+	auto p2_bar = p2_model->get_primitive("bar");
+
 	bool change_angle = false;
 	bool p1_pass = true;
 	bool p2_pass = true;
@@ -174,15 +176,25 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		if (m_state.load() == game_state::stop)
 			break;
 
+		if (int(x + x_step) > int(MAIN_FIELD_W - 2))
+			x_step = -1;
+
+		if (int(x + x_step) <= int(MAIN_FIELD_X))
+			x_step = 1;
+
+		x += x_step;
+		y += y_step;
+		shadow_x -= x_step;
+
 		size_t bar_x = 0;
 		size_t bar_w = 0;
 
-		if (y == MAIN_FIELD_Y + 2)
+		if (y == MAIN_FIELD_Y + 1)
 		{
 			bar_x = p2_bar->get_x();
 			bar_w = p2_bar->get_w();
 
-			if ((x < bar_x || x > bar_x + bar_w))
+			if ((shadow_x < bar_x) || (shadow_x >= bar_x + bar_w))
 			{
 				if (p1_pass)
 				{
@@ -199,12 +211,12 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			}
 		}
 
-		if (y == MAIN_FIELD_H - 3)
+		if (y == MAIN_FIELD_H - 4)
 		{
 			bar_x = p1_bar->get_x();
 			bar_w = p1_bar->get_w();
 
-			if ((x < bar_x || x > bar_x + bar_w))
+			if ((x < bar_x) || (x >= bar_x + bar_w))
 			{
 				if (p2_pass)
 				{
@@ -221,18 +233,19 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			}
 		}
 
-		if (y == MAIN_FIELD_Y + 1)
+		if (y == MAIN_FIELD_Y)
 		{
 			y_step = 1;
 			p1_pass = false;
 		}
-		if (y == MAIN_FIELD_H - 2)
+		if (y == MAIN_FIELD_H - 3)
 		{
 			y_step = -1;
 			p2_pass = false;
 		}
 
 		//Change ball angle if ball hit bar corners
+		/*
 		if (change_angle)
 		{
 			if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
@@ -247,15 +260,7 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			}
 			change_angle = false;
 		}
-
-		if (int(x + x_step) >= int(MAIN_FIELD_W - 1))
-			x_step = -1;
-
-		if (int(x + x_step) <= int(MAIN_FIELD_X))
-			x_step = 1;
-
-		x += x_step;
-		y += y_step;
+		*/
 
 		p1_model->move_primitive("ball", x_step, y_step);
 		//Mirror shadow primitive moves
