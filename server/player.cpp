@@ -6,22 +6,23 @@ player::player(connection_ptr client_conn, const std::string& player_name, const
 	m_shadow_player_name = shadow_player_name;
 	m_connection = client_conn;
 
-	m_player_view = make_shared<network_view>(client_conn);
-	m_player_model = make_shared<model>(m_player_view);
+	m_view = make_shared<network_view>(client_conn);
+	m_model = make_shared<model>(m_view);
 
 	//Init gui
-	m_player_model->create_primitive<rectangle>("battlefield", MAIN_FIELD_X, MAIN_FIELD_Y, MAIN_FIELD_W, MAIN_FIELD_H);
-	m_player_model->create_primitive<line>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN, '=');
-	m_player_model->create_primitive<line>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN, '=');
-	m_player_model->create_primitive<text_box>("player_state", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, "connected");
-	m_player_model->create_primitive<text_box>("shadow_player_state", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, "connected");
+	m_model->create_primitive<rectangle>("battlefield", MAIN_FIELD_X, MAIN_FIELD_Y, MAIN_FIELD_W, MAIN_FIELD_H);
+	m_model->create_primitive<line>("bar", MAIN_BAR_X, MAIN_BAR_Y, BAR_LEN, '=');
+	m_model->create_primitive<line>("shadow_bar", SHADOW_BAR_X, SHADOW_BAR_Y, BAR_LEN, '=');
+	m_model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
+	m_model->create_primitive<text_box>("player_state", MAIN_PLAYERNAME_FIELD_X, MAIN_PLAYERNAME_FIELD_Y, "connected");
+	m_model->create_primitive<text_box>("shadow_player_state", SHADOW_PLAYER_NAME_FIELD_X, SHADOW_PLAYER_NAME_FIELD_Y, "connected");
 }
 
 void player::set_player_text(const std::string& new_text, const std::string& field_name)
 {
-	auto old_primitive = m_player_model->get_primitive(field_name);
+	auto old_primitive = m_model->get_primitive(field_name);
 
-	m_player_model->create_primitive<text_box>(field_name,
+	m_model->create_primitive<text_box>(field_name,
 		old_primitive->get_x(),
 		old_primitive->get_y(),
 		new_text);
@@ -33,7 +34,6 @@ void player::set_name(const std::string& player_name)
 	set_player_text(m_player_name + ":wait", "player_state");
 }
 
-std::string& player::get_shadow_name() { return m_shadow_player_name; }
 void player::set_shadow_name(const std::string& shadow_player_name)
 {
 	m_shadow_player_name = shadow_player_name;
@@ -51,6 +51,7 @@ void player::add_goal()
 	m_goal_counter++;
 	set_player_text(m_player_name + ":" + std::to_string(m_goal_counter), "player_state");
 };
+
 
 void player::change_shadow_player_state(game_state state)
 {

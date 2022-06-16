@@ -27,18 +27,17 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 	std::string buffer;
 	std::string custom_player_name = "";
 
-	auto p1_model = player1->get_model();
-	auto p2_model = player2->get_model();
-
 	auto player_connection = player1->get_connection();
 
 	player1->change_player_state(game_state::wait);
 	player1->change_shadow_player_state(game_state::wait);
 
-	size_t battlefield_x = p1_model->get_primitive("battlefield")->get_x();
-	size_t battlefield_w = p1_model->get_primitive("battlefield")->get_w();
+	size_t battlefield_x = player1->get_battlefield_x();
+	size_t battlefield_w = player2->get_battlefield_w();
 
 	int x_step = 0;
+
+	size_t bar_len = player1->get_bar_len();
 
 	while (true)
 	{
@@ -64,7 +63,7 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 			{
 				case KEY_LEFT:
 				{
-					if (p1_model->get_primitive("bar")->get_x() > battlefield_x + 1)
+					if (player1->get_bar_pos() > battlefield_x + 1)
 						x_step = -1;
 					else
 						continue;
@@ -73,7 +72,7 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 				}
 				case KEY_RIGHT:
 				{
-					if (p1_model->get_primitive("bar")->get_x() < battlefield_w - BAR_LEN - 1)
+					if (player1->get_bar_pos() < battlefield_w - bar_len - 1)
 						x_step = 1;
 					else
 						continue;
@@ -107,18 +106,17 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 				}
 			}
 
-			p1_model->move_primitive("bar", x_step, 0);
+			player1->move_bar(x_step);
 			//Mirror shadow primitive moves
-			p2_model->move_primitive("shadow_bar", -x_step, 0);
+			player2->move_shadow_bar(-x_step);
 
 			if (master)
 			{
 				//Move ball until game not started
 				if (m_state.load() != game_state::start)
 				{
-					p1_model->move_primitive("ball", x_step, 0);
-					//Mirror shadow primitive moves
-					p2_model->move_primitive("shadow_ball", -x_step, 0);
+					player1->move_ball(x_step, 0);
+					player2->move_ball(-x_step, 0);
 				}
 			}
 		}
@@ -134,11 +132,8 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	int x_step = -1;
 	int y_step = -1;
 
-	auto p1_model = player1->get_model();
-	auto p2_model = player2->get_model();
-
-	p1_model->create_primitive<point>("ball", MAIN_BALL_X, MAIN_BALL_Y, 'O');
-	p2_model->create_primitive<point>("shadow_ball", SHADOW_BALL_X, SHADOW_BALL_Y, 'O');
+	//Mode player2 ball to opposite side
+	player2->move_ball(18, -25);
 
 	//Wait for players ready
 	player1->wait_for_ready();
@@ -157,18 +152,15 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	player1->change_shadow_player_state(game_state::start);
 	player2->change_shadow_player_state(game_state::start);
 
-	size_t x = p1_model->get_primitive("ball")->get_x();
-	size_t y = p1_model->get_primitive("ball")->get_y();
-	size_t shadow_x = p2_model->get_primitive("shadow_ball")->get_x();
+	size_t x = player1->get_ball_x();
+	size_t y = player1->get_ball_y();
+	size_t shadow_x = player2->get_ball_x();
+	size_t shadow_y = player2->get_ball_y();
 
 	m_state.store(game_state::start);
 
-	auto p1_bar = p1_model->get_primitive("bar");
-	auto p2_bar = p2_model->get_primitive("bar");
-
-	bool change_angle = false;
-	bool p1_pass = true;
-	bool p2_pass = true;
+	size_t bar_x = 0;
+	size_t bar_w = 0;
 
 	while (true)
 	{
@@ -176,95 +168,81 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		if (m_state.load() == game_state::stop)
 			break;
 
-		if (int(x + x_step) > int(MAIN_FIELD_W - 2))
-			x_step = -1;
+		//Change ball angle if ball hit bar corners
+ 		if (shadow_y == MAIN_FIELD_H - 3)
+		{
+			bar_x = player2->get_bar_pos();
+			bar_w = player2->get_bar_len();
 
-		if (int(x + x_step) <= int(MAIN_FIELD_X))
-			x_step = 1;
+			if (shadow_x - x_step >= bar_x && shadow_x - x_step < bar_x + bar_w)
+			{
+				y_step = 1;
+
+				if ((bar_x + 1 == shadow_x) || (bar_x + bar_w - 2 == shadow_x))
+					x_step = x_step * 2;
+				if ((bar_x == shadow_x) || (bar_x + bar_w - 1 == shadow_x))
+					x_step = x_step * 3;
+			}
+		}
+
+		if (y == MAIN_FIELD_H - 3)
+		{
+			bar_x = player1->get_bar_pos();
+			bar_w = player1->get_bar_len();
+
+			if (x + x_step >= bar_x && x + x_step < bar_x + bar_w)
+			{
+				y_step = -1;
+
+				if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
+					x_step = x_step * 2;
+				if ((bar_x == x) || (bar_x + bar_w - 1 == x))
+					x_step = x_step * 3;
+			}
+		}
+
+		if (x_step < 0)
+		{
+			if (x - MAIN_FIELD_X - 1 < std::abs(x_step))
+			{
+				if (x != MAIN_FIELD_X + 1)
+					x_step = int(MAIN_FIELD_X - x + 1);
+				else
+					x_step = 1;
+			}
+		}
+		else
+		{
+			if (MAIN_FIELD_W - x - 2 < x_step)
+			{
+				if(x != MAIN_FIELD_W - 2)
+					x_step = int(MAIN_FIELD_W - x - 2);
+				else
+					x_step = -1;
+			}
+		}
+
+		if (shadow_y == MAIN_FIELD_H - 2)
+		{
+			y_step = 1;
+			player2->add_goal();
+			player1->add_shadow_goal();
+
+		}
+		if (y == MAIN_FIELD_H - 2)
+		{
+			y_step = -1;
+			player1->add_goal();
+			player2->add_shadow_goal();
+		}
 
 		x += x_step;
 		y += y_step;
 		shadow_x -= x_step;
+		shadow_y -= y_step;
 
-		size_t bar_x = 0;
-		size_t bar_w = 0;
-
-		if (y == MAIN_FIELD_Y + 1)
-		{
-			bar_x = p2_bar->get_x();
-			bar_w = p2_bar->get_w();
-
-			if ((shadow_x < bar_x) || (shadow_x >= bar_x + bar_w))
-			{
-				if (p1_pass)
-				{
-					player2->add_goal();
-					player1->add_shadow_goal();
-				}
-				else
-					p1_pass = true;
-			}
-			else
-			{
-				change_angle = true;
-				y_step = 1;
-			}
-		}
-
-		if (y == MAIN_FIELD_H - 4)
-		{
-			bar_x = p1_bar->get_x();
-			bar_w = p1_bar->get_w();
-
-			if ((x < bar_x) || (x >= bar_x + bar_w))
-			{
-				if (p2_pass)
-				{
-					player1->add_goal();
-					player2->add_shadow_goal();
-				}
-				else
-					p2_pass = true;
-			}
-			else
-			{
-				change_angle = true;
-				y_step = -1;
-			}
-		}
-
-		if (y == MAIN_FIELD_Y)
-		{
-			y_step = 1;
-			p1_pass = false;
-		}
-		if (y == MAIN_FIELD_H - 3)
-		{
-			y_step = -1;
-			p2_pass = false;
-		}
-
-		//Change ball angle if ball hit bar corners
-		/*
-		if (change_angle)
-		{
-			if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
-			{
-				if (x >= 2 && MAIN_FIELD_W - 2)
-					x_step = x_step * 2;
-			}
-			if ((bar_x == x) || (bar_x + bar_w - 1 == x))
-			{
-				if (x >= 3 && x < MAIN_FIELD_W - 3)
-					x_step = x_step * 3;
-			}
-			change_angle = false;
-		}
-		*/
-
-		p1_model->move_primitive("ball", x_step, y_step);
-		//Mirror shadow primitive moves
-		p2_model->move_primitive("shadow_ball", -x_step, -y_step);
+		player1->move_ball(x_step, y_step);
+		player2->move_ball(-x_step, -y_step);
 
 		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(BALL_TRESHOLD));
 	}

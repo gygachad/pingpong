@@ -12,8 +12,8 @@ class player
 	using model_ptr = std::shared_ptr<model>;
 
 	connection_ptr m_connection;
-	net_view_ptr m_player_view;
-	model_ptr m_player_model;
+	net_view_ptr m_view;
+	model_ptr m_model;
 
 	std::atomic_flag m_ready;
 	std::string m_player_name;
@@ -29,18 +29,26 @@ public:
 
 	player(connection_ptr client_conn, const std::string& player_name, const std::string& shadow_player_name);
 
-	model_ptr get_model() { return m_player_model; }
 	connection_ptr get_connection() { return m_connection; }
+	std::string& get_shadow_name() { return m_shadow_player_name; }
 
-	std::string& get_name();
 	void set_name(const std::string& player_name);
-
-	std::string& get_shadow_name();
 	void set_shadow_name(const std::string& shadow_player_name);
 	
 	void add_shadow_goal();
 	void add_goal();
-	
+
+	void move_bar(			int x_offset) {						m_model->move_primitive("bar", x_offset, 0); }
+	void move_shadow_bar(	int x_offset) {						m_model->move_primitive("shadow_bar", x_offset, 0); }
+	void move_ball(			int x_offset, int y_offset) {		m_model->move_primitive("ball", x_offset, y_offset); }
+
+	size_t get_bar_pos() {			return m_model->get_primitive("bar")->get_x(); }
+	size_t get_bar_len() {			return m_model->get_primitive("bar")->get_w(); }
+	size_t get_battlefield_x() {	return m_model->get_primitive("battlefield")->get_x(); }
+	size_t get_battlefield_w() {	return m_model->get_primitive("battlefield")->get_w(); }
+	size_t get_shadow_bar_pos() {	return m_model->get_primitive("shadow_bar")->get_x(); }
+	size_t get_ball_x() {			return m_model->get_primitive("ball")->get_x(); }
+	size_t get_ball_y() {			return m_model->get_primitive("ball")->get_y(); }
 
 	void change_shadow_player_state(game_state state);
 	void change_player_state(game_state state);

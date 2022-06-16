@@ -15,6 +15,11 @@ public:
     network_view(connection_ptr client) : m_client(client) {}
     ~network_view() {}
 
+    void operator=(const network_view& other)
+    {
+        m_client = other.m_client;
+    }
+
     void screen_init() override {}
     void cls() override {}
 

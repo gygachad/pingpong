@@ -296,7 +296,7 @@ public:
 
         new_primitive->get_data(diff_pixels);
 
-        std::unique_lock<std::mutex> lock(m_primitives_lock);
+        std::lock_guard<std::mutex> lock(m_primitives_lock);
 
         //calc diff
         if (gui_primitives.contains(name))
@@ -334,7 +334,7 @@ public:
 
     void move_primitive(const std::string& name, size_t x, size_t y)
     {
-        std::unique_lock<std::mutex> lock(m_primitives_lock);
+        std::lock_guard<std::mutex> lock(m_primitives_lock);
 
         //calc diff
         if (gui_primitives.contains(name))
@@ -372,7 +372,7 @@ public:
     
     void clean_primitive(const std::string& name)
     {
-        std::unique_lock<std::mutex> lock(m_primitives_lock);
+        std::lock_guard<std::mutex> lock(m_primitives_lock);
 
         if (gui_primitives.contains(name))
         {
@@ -389,7 +389,7 @@ public:
 
     void draw_primitive(const std::string& name)
     {
-        std::unique_lock<std::mutex> lock(m_primitives_lock);
+        std::lock_guard<std::mutex> lock(m_primitives_lock);
 
         if (gui_primitives.contains(name))
         {
