@@ -39,6 +39,8 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 
 	size_t bar_len = player1->get_bar_len();
 
+	std::unique_lock<std::mutex> lock(m_bb_lock, std::defer_lock);
+
 	while (true)
 	{
 		//Check if socket alive
@@ -105,10 +107,16 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 					continue;
 				}
 			}
-
-			player1->move_bar(x_step);
-			//Mirror shadow primitive moves
-			player2->move_shadow_bar(-x_step);
+			
+			lock.lock();
+			size_t y = player1->get_ball_y();
+			if (y != MAIN_FIELD_H - 2)
+			{
+				player1->move_bar(x_step);
+				//Mirror shadow primitive moves
+				player2->move_shadow_bar(-x_step);
+			}
+			lock.unlock();
 
 			if (master)
 			{
@@ -144,8 +152,15 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		player2->m_state.load() == game_state::stop)
 		return;
 
-	//Add graphic counter
-	//std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(3000));
+	for (size_t i = 300; i; i--)
+	{
+		player1->set_ready_timer(i);
+		player2->set_ready_timer(i);
+		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(1));
+	}
+
+	player1->clean_ready_timer();
+	player2->clean_ready_timer();
 
 	player1->change_player_state(game_state::start);
 	player2->change_player_state(game_state::start);
@@ -160,7 +175,10 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	m_state.store(game_state::start);
 
 	size_t bar_x = 0;
-	size_t bar_w = 0;
+	size_t p1_bar_w = player2->get_bar_len();
+	size_t p2_bar_w = player1->get_bar_len();
+
+	std::unique_lock<std::mutex> lock(m_bb_lock, std::defer_lock);
 
 	while (true)
 	{
@@ -168,38 +186,7 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		if (m_state.load() == game_state::stop)
 			break;
 
-		//Change ball angle if ball hit bar corners
- 		if (shadow_y == MAIN_FIELD_H - 3)
-		{
-			bar_x = player2->get_bar_pos();
-			bar_w = player2->get_bar_len();
-
-			if (shadow_x - x_step >= bar_x && shadow_x - x_step < bar_x + bar_w)
-			{
-				y_step = 1;
-
-				if ((bar_x + 1 == shadow_x) || (bar_x + bar_w - 2 == shadow_x))
-					x_step = x_step * 2;
-				if ((bar_x == shadow_x) || (bar_x + bar_w - 1 == shadow_x))
-					x_step = x_step * 3;
-			}
-		}
-
-		if (y == MAIN_FIELD_H - 3)
-		{
-			bar_x = player1->get_bar_pos();
-			bar_w = player1->get_bar_len();
-
-			if (x + x_step >= bar_x && x + x_step < bar_x + bar_w)
-			{
-				y_step = -1;
-
-				if ((bar_x + 1 == x) || (bar_x + bar_w - 2 == x))
-					x_step = x_step * 2;
-				if ((bar_x == x) || (bar_x + bar_w - 1 == x))
-					x_step = x_step * 3;
-			}
-		}
+		m_bb_lock.lock();
 
 		if (x_step < 0)
 		{
@@ -215,7 +202,61 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		{
 			if (MAIN_FIELD_W - x - 2 < x_step)
 			{
-				if(x != MAIN_FIELD_W - 2)
+				if (x != MAIN_FIELD_W - 2)
+					x_step = int(MAIN_FIELD_W - x - 2);
+				else
+					x_step = -1;
+			}
+		}
+
+		//Change ball angle if ball hit bar corners
+ 		if (shadow_y == MAIN_FIELD_H - 3)
+		{
+			bar_x = player2->get_bar_pos();
+			
+			if (shadow_x - x_step >= bar_x && shadow_x - x_step < bar_x + p2_bar_w)
+			{
+				y_step = 1;
+				
+				if ((bar_x + 1 == shadow_x) || (bar_x + p2_bar_w - 2 == shadow_x))
+					x_step = x_step * 2;
+				if ((bar_x == shadow_x) || (bar_x + p2_bar_w - 1 == shadow_x))
+					x_step = x_step * 3;
+			}	
+		}
+
+		if (y == MAIN_FIELD_H - 3)
+		{
+			bar_x = player1->get_bar_pos();
+			
+			if (x + x_step >= bar_x && x + x_step < bar_x + p1_bar_w)
+			{
+				y_step = -1;
+				
+				if ((bar_x + 1 == x) || (bar_x + p1_bar_w - 2 == x))
+					x_step = x_step * 2;
+				if ((bar_x == x) || (bar_x + p1_bar_w - 1 == x))
+					x_step = x_step * 3;
+			}
+			
+		}
+
+		//Check for step correction again
+		if (x_step < 0)
+		{
+			if (x - MAIN_FIELD_X - 1 < std::abs(x_step))
+			{
+				if (x != MAIN_FIELD_X + 1)
+					x_step = int(MAIN_FIELD_X - x + 1);
+				else
+					x_step = 1;
+			}
+		}
+		else
+		{
+			if (MAIN_FIELD_W - x - 2 < x_step)
+			{
+				if (x != MAIN_FIELD_W - 2)
 					x_step = int(MAIN_FIELD_W - x - 2);
 				else
 					x_step = -1;
@@ -244,7 +285,9 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		player1->move_ball(x_step, y_step);
 		player2->move_ball(-x_step, -y_step);
 
-		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(BALL_TRESHOLD));
+		m_bb_lock.unlock();
+
+		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(SRV_TRESHOLD));
 	}
 }
 

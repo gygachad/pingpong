@@ -15,6 +15,19 @@ bool connection::connect(const std::string& ip, const uint16_t port)
 	return true;
 }
 
+size_t connection::read(void* data, size_t len)
+{
+	size_t recv_len = 0;
+
+	std::error_code ec;
+	recv_len = m_sock.receive(asio::buffer(data, len), 0, ec);
+
+	if (ec.value())
+		return 0;
+
+	return recv_len;
+}
+
 size_t connection::read(std::string& buffer)
 {
 	char recv_data[BLOCK_SIZE];
@@ -47,14 +60,20 @@ size_t connection::read(std::string& buffer)
 
 size_t connection::write(const std::string& str)
 {
+	return
+		write(str.c_str(), str.length());
+}
+
+size_t connection::write(const void* data, size_t len)
+{
 	std::error_code ec;
 
-	size_t len = m_sock.send(asio::buffer(str), 0, ec);
-	
-	if (ec.value())
-		len = 0;
+	size_t sent_len = m_sock.send(asio::buffer(data,len), 0, ec);
 
-	return len;
+	if (ec.value())
+		sent_len = 0;
+
+	return sent_len;
 }
 
 void connection::disconnect()

@@ -32,6 +32,9 @@ class srv_session
 	player_ptr m_player1;
 	player_ptr m_player2;
 
+	//Bar-Ball synchro
+	std::mutex m_bb_lock;
+
 public:
 	srv_session(connection_ptr master, connection_ptr slave);
 

@@ -52,7 +52,6 @@ void player::add_goal()
 	set_player_text(m_player_name + ":" + std::to_string(m_goal_counter), "player_state");
 };
 
-
 void player::change_shadow_player_state(game_state state)
 {
 	switch (state)

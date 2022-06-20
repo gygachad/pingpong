@@ -22,6 +22,9 @@ public:
 
 	bool connect(const std::string& ip, const uint16_t port);
 	size_t read(std::string& buffer);
+	size_t read(void* data, size_t len);
 	size_t write(const std::string& str);
+	size_t write(const void* data, size_t len);
+
 	void disconnect();
 };

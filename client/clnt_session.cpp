@@ -50,7 +50,24 @@ void clnt_session::paint_th()
 	scr.screen_init();
 	scr.cls();
 	scr.set_offset(1, 1);
-	
+
+	while (true)
+	{
+		unsigned long code = 0;
+
+		size_t len = m_srv.read(&code, sizeof(unsigned long));
+
+		if (len != 4)
+			continue;
+
+		char c = code >> 24;
+		size_t y = (code >> 12) & 0xFFF;
+		size_t x = code & 0xFFF;
+
+		scr.make_paint(x, y, c);
+	}
+
+	/*
 	std::vector<char_pixel> paint_pixel;
 
 	while (true)
@@ -91,6 +108,7 @@ void clnt_session::paint_th()
 
 		scr.make_paint(paint_pixel);
 	}
+	*/
 }
 
 void clnt_session::wait_end()
