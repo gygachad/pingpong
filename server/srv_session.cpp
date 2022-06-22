@@ -15,6 +15,7 @@ srv_session::srv_session(connection_ptr master, connection_ptr slave)
 
 void srv_session::start_game()
 {
+	//Initial state
 	m_state.store(game_state::wait);
 
 	m_paint_th = std::thread(&srv_session::paint_th, this, m_player1, m_player2);
@@ -29,8 +30,8 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 
 	auto player_connection = player1->get_connection();
 
-	player1->change_player_state(game_state::wait);
-	player1->change_shadow_player_state(game_state::wait);
+	player1->change_player_state(player_state::wait);
+	player1->change_shadow_player_state(player_state::wait);
 
 	size_t battlefield_x = player1->get_battlefield_x();
 	size_t battlefield_w = player2->get_battlefield_w();
@@ -40,6 +41,10 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 	size_t bar_len = player1->get_bar_len();
 
 	std::unique_lock<std::mutex> lock(m_bb_lock, std::defer_lock);
+
+	//Mode player2 ball to opposite side
+	if (master)
+		player2->move_ball(SHADOW_BALL_OFFSET_X, SHADOW_BALL_OFFSET_Y);
 
 	while (true)
 	{
@@ -69,7 +74,6 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 						x_step = -1;
 					else
 						continue;
-
 					break;
 				}
 				case KEY_RIGHT:
@@ -78,18 +82,20 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 						x_step = 1;
 					else
 						continue;
-
 					break;
 				}
 				case KEY_SPACEBAR:
 				{
-					player2->change_shadow_player_state(game_state::ready);
-					player1->change_player_state(game_state::ready);
+					if (player1->m_state.load() == player_state::wait)
+					{
+						player2->change_shadow_player_state(player_state::ready);
+						player1->change_player_state(player_state::ready);
+					}
 					continue;
 				}
 				default:
 				{
-					if (player1->m_state.load() == game_state::wait)
+					if (player1->m_state.load() == player_state::wait)
 					{
 						if (custom_player_name.length() < 10)
 						{
@@ -103,11 +109,11 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 							}
 						}
 					}
-					
 					continue;
 				}
 			}
-			
+
+			//Loack Bar/Ball operation
 			lock.lock();
 			size_t y = player1->get_ball_y();
 			if (y != MAIN_FIELD_H - 2)
@@ -121,7 +127,7 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 			if (master)
 			{
 				//Move ball until game not started
-				if (m_state.load() != game_state::start)
+				if (player1->m_state.load() != player_state::start)
 				{
 					player1->move_ball(x_step, 0);
 					player2->move_ball(-x_step, 0);
@@ -135,25 +141,24 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 {
 	std::string buffer;
 
-	std::srand(std::time(nullptr));
-	//int x_step = (std::rand() % 2) ? 1 : -1;
-	int x_step = -1;
+	std::srand(std::time(0));
+	int x_step = (std::rand() % 2) ? 1 : -1;
 	int y_step = -1;
-
-	//Mode player2 ball to opposite side
-	player2->move_ball(18, -25);
 
 	//Wait for players ready
 	player1->wait_for_ready();
 	player2->wait_for_ready();
 
-	//Player fell of before start
-	if (player1->m_state.load() == game_state::stop ||
-		player2->m_state.load() == game_state::stop)
-		return;
+	//Start game here
+	m_state.store(game_state::start);
+	m_start_game.test_and_set();
+	m_start_game.notify_one();
 
 	for (size_t i = 300; i; i--)
 	{
+		if (m_state.load() == game_state::stop)
+			return;
+
 		player1->set_ready_timer(i);
 		player2->set_ready_timer(i);
 		std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(1));
@@ -162,17 +167,15 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 	player1->clean_ready_timer();
 	player2->clean_ready_timer();
 
-	player1->change_player_state(game_state::start);
-	player2->change_player_state(game_state::start);
-	player1->change_shadow_player_state(game_state::start);
-	player2->change_shadow_player_state(game_state::start);
+	player1->change_player_state(player_state::start);
+	player2->change_player_state(player_state::start);
+	player1->change_shadow_player_state(player_state::start);
+	player2->change_shadow_player_state(player_state::start);
 
 	size_t x = player1->get_ball_x();
 	size_t y = player1->get_ball_y();
 	size_t shadow_x = player2->get_ball_x();
 	size_t shadow_y = player2->get_ball_y();
-
-	m_state.store(game_state::start);
 
 	size_t bar_x = 0;
 	size_t p1_bar_w = player2->get_bar_len();
@@ -216,12 +219,15 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			
 			if (shadow_x - x_step >= bar_x && shadow_x - x_step < bar_x + p2_bar_w)
 			{
-				y_step = 1;
-				
-				if ((bar_x + 1 == shadow_x) || (bar_x + p2_bar_w - 2 == shadow_x))
-					x_step = x_step * 2;
-				if ((bar_x == shadow_x) || (bar_x + p2_bar_w - 1 == shadow_x))
-					x_step = x_step * 3;
+				if (y_step != 1)
+				{
+					y_step = 1;
+
+					if ((bar_x + 1 == shadow_x - x_step) || (bar_x + p2_bar_w - 2 == shadow_x - x_step))
+						x_step = x_step * 2;
+					if ((bar_x == shadow_x - x_step) || (bar_x + p2_bar_w - 1 == shadow_x - x_step))
+						x_step = x_step * 3;
+				}
 			}	
 		}
 
@@ -231,14 +237,16 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 			
 			if (x + x_step >= bar_x && x + x_step < bar_x + p1_bar_w)
 			{
-				y_step = -1;
-				
-				if ((bar_x + 1 == x) || (bar_x + p1_bar_w - 2 == x))
-					x_step = x_step * 2;
-				if ((bar_x == x) || (bar_x + p1_bar_w - 1 == x))
-					x_step = x_step * 3;
+				if (y_step != -1)
+				{
+					y_step = -1;
+
+					if ((bar_x + 1 == x + x_step) || (bar_x + p1_bar_w - 2 == x + x_step))
+						x_step = x_step * 2;
+					if ((bar_x == x + x_step) || (bar_x + p1_bar_w - 1 == x + x_step))
+						x_step = x_step * 3;
+				}
 			}
-			
 		}
 
 		//Check for step correction again
@@ -293,6 +301,15 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 
 void srv_session::stop_game()
 {
+	if (m_state.load() == game_state::stop)
+		return;
+
+	m_player1->change_player_state(player_state::stop);
+	m_player2->change_player_state(player_state::stop);
+
+	//Wait until game state changed
+	m_start_game.wait(false);
+
 	m_state.store(game_state::stop);
 
 	m_stop_game.test_and_set();
@@ -303,20 +320,15 @@ void srv_session::wait_end()
 {
 	m_stop_game.wait(false);
 
-	m_player1->change_player_state(game_state::stop);
-	m_player2->change_player_state(game_state::stop);
-
-	m_state.store(game_state::stop);
-
 	m_p1_client->disconnect();
 	m_p2_client->disconnect();
 
 	if (m_paint_th.joinable())
 		m_paint_th.join();
-	
+
 	if (m_p1_input_th.joinable())
 		m_p1_input_th.join();
-	
+
 	if (m_p2_input_th.joinable())
 		m_p2_input_th.join();
 }

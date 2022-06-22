@@ -275,7 +275,6 @@ class model
     using paint_map = std::map<std::pair<size_t, size_t>, char>;
     using view_ptr = std::shared_ptr<view>;
 
-    //std::map<primitive_types_en, primitive_ptr> gui_primitives;
     std::map<std::string, primitive_ptr> gui_primitives;
     std::mutex m_primitives_lock;
 
@@ -298,7 +297,6 @@ public:
 
         std::lock_guard<std::mutex> lock(m_primitives_lock);
 
-        //calc diff
         if (gui_primitives.contains(name))
         {
             auto old_primitive = gui_primitives[name];
@@ -336,7 +334,6 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_primitives_lock);
 
-        //calc diff
         if (gui_primitives.contains(name))
         {
             auto primitive = gui_primitives[name];
@@ -401,6 +398,18 @@ public:
         else
         {
             //handle err
+        }
+    }
+
+    void clean_all()
+    {
+        std::lock_guard<std::mutex> lock(m_primitives_lock);
+
+        for (auto& p : gui_primitives)
+        {
+            paint_map pixels;
+            p.second->clean(pixels);
+            m_view->paint(pixels);
         }
     }
 };

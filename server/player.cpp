@@ -23,9 +23,9 @@ void player::set_player_text(const std::string& new_text, const std::string& fie
 	auto old_primitive = m_model->get_primitive(field_name);
 
 	m_model->create_primitive<text_box>(field_name,
-		old_primitive->get_x(),
-		old_primitive->get_y(),
-		new_text);
+										old_primitive->get_x(),
+										old_primitive->get_y(),
+										new_text);
 }
 
 void player::set_name(const std::string& player_name)
@@ -52,21 +52,21 @@ void player::add_goal()
 	set_player_text(m_player_name + ":" + std::to_string(m_goal_counter), "player_state");
 };
 
-void player::change_shadow_player_state(game_state state)
+void player::change_shadow_player_state(player_state state)
 {
 	switch (state)
 	{
-	case game_state::wait:
+	case player_state::wait:
 	{
 		set_player_text(m_shadow_player_name + ":wait", "shadow_player_state");
 		break;
 	}
-	case game_state::ready:
+	case player_state::ready:
 	{
 		set_player_text(m_shadow_player_name + ":ready", "shadow_player_state");
 		break;
 	}
-	case game_state::start:
+	case player_state::start:
 	{
 		set_player_text(m_shadow_player_name + ":" + std::to_string(m_goal_counter), "shadow_player_state");
 		break;
@@ -76,17 +76,17 @@ void player::change_shadow_player_state(game_state state)
 	}
 }
 
-void player::change_player_state(game_state state)
+void player::change_player_state(player_state state)
 {
 	switch (state)
 	{
-	case game_state::wait:
+	case player_state::wait:
 	{
 		set_player_text(m_player_name + ":wait", "player_state");
 		m_state.store(state);
 		break;
 	}
-	case game_state::ready:
+	case player_state::ready:
 	{
 		set_player_text(m_player_name + ":ready", "player_state");
 		m_state.store(state);
@@ -94,13 +94,13 @@ void player::change_player_state(game_state state)
 		m_ready.notify_one();
 		break;
 	}
-	case game_state::start:
+	case player_state::start:
 	{
 		set_player_text(m_player_name + ":" + std::to_string(m_goal_counter), "player_state");
 		m_state.store(state);
 		break;
 	}
-	case game_state::stop:
+	case player_state::stop:
 	{
 		m_ready.test_and_set();
 		m_ready.notify_one();

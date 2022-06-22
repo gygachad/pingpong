@@ -6,12 +6,6 @@
 #include "..\str_tool.h"
 #include "clnt_session.h"
 
-#define KEY_UP 72
-#define KEY_DOWN 80
-#define KEY_LEFT 75
-#define KEY_RIGHT 77
-#define SPACEBAR 32
-
 void clnt_session::start_game()
 {
 	m_paint_th = std::thread(&clnt_session::paint_th, this);
@@ -20,10 +14,6 @@ void clnt_session::start_game()
 
 void clnt_session::input_th()
 {
-	std::map<int, std::string> m_keymap = {	{KEY_LEFT , "L\n"}, 
-											{KEY_RIGHT, "R\n"}, 
-											{SPACEBAR, "S\n"}};
-
 	std::stringstream ss;
 
 	while (true)
@@ -57,6 +47,9 @@ void clnt_session::paint_th()
 
 		size_t len = m_srv.read(&code, sizeof(unsigned long));
 
+		if (len == 0)
+			break;
+
 		if (len != 4)
 			continue;
 
@@ -66,49 +59,6 @@ void clnt_session::paint_th()
 
 		scr.make_paint(x, y, c);
 	}
-
-	/*
-	std::vector<char_pixel> paint_pixel;
-
-	while (true)
-	{
-		size_t len = m_srv.read(buffer);
-
-		if (len == 0)
-			break;
-
-		paint_pixel.clear();
-
-		std::vector<std::string> cmd_line = str_tool::split(buffer, "\n");
-
-		for (const auto& cmd : cmd_line)
-		{
-			std::vector<std::string> paint_cmd = str_tool::split(cmd, ";");
-
-			if (paint_cmd.size() != 3)
-				continue;
-
-			size_t x = 0;
-			ss = std::stringstream(paint_cmd[0]);
-			ss >> x;
-
-			size_t y = 0;
-			ss = std::stringstream(paint_cmd[1]);
-			ss >> y;
-
-			char c = 0;
-			ss = std::stringstream(paint_cmd[2]);
-			ss >> c;
-
-			if (c == 0)
-				c = ' ';
-
-			paint_pixel.emplace_back(char_pixel(x, y, c));
-		}
-
-		scr.make_paint(paint_pixel);
-	}
-	*/
 }
 
 void clnt_session::wait_end()

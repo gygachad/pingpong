@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "connection.h"
 
 bool connection::connect(const std::string& ip, const uint16_t port)
@@ -6,30 +8,45 @@ bool connection::connect(const std::string& ip, const uint16_t port)
 	m_sock = asio::ip::tcp::socket(m_io_service);
 	
 	std::error_code ec;
-
 	m_sock.connect(ep, ec);
 
 	if (ec.value())
+	{
+		m_connected = false;
 		return false;
+	}	
 
 	return true;
 }
 
 size_t connection::read(void* data, size_t len)
 {
-	size_t recv_len = 0;
+	read_lock lock(m_sock_lock);
 
+	if (!m_connected)
+		return 0;
+
+	size_t recv_len = 0;
 	std::error_code ec;
+
 	recv_len = m_sock.receive(asio::buffer(data, len), 0, ec);
 
 	if (ec.value())
+	{
+		m_connected = false;
 		return 0;
+	}
 
 	return recv_len;
 }
 
 size_t connection::read(std::string& buffer)
 {
+	read_lock lock(m_sock_lock);
+
+	if (!m_connected)
+		return 0;
+
 	char recv_data[BLOCK_SIZE];
 	buffer.clear();
 
@@ -66,6 +83,16 @@ size_t connection::write(const std::string& str)
 
 size_t connection::write(const void* data, size_t len)
 {
+	/*
+	m_sock.async_write_some(asio::buffer(data, len),
+							std::bind(&connection::on_write, this, std::placeholders::_1, std::placeholders::_2));
+						*/
+
+	read_lock lock(m_sock_lock);
+
+	if (!m_connected)
+		return 0;
+
 	std::error_code ec;
 
 	size_t sent_len = m_sock.send(asio::buffer(data,len), 0, ec);
@@ -78,10 +105,11 @@ size_t connection::write(const void* data, size_t len)
 
 void connection::disconnect()
 {
-	if (m_sock.is_open())
-	{
-		std::error_code ec = asio::error::connection_aborted;
-		m_sock.close(ec);
-		m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-	}
+	write_lock lock(m_sock_lock);
+	
+	std::error_code ec = asio::error::connection_aborted;
+	m_sock.close(ec);
+	m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+	
+	m_connected = false;
 }

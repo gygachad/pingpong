@@ -19,13 +19,14 @@ class player
 	std::string m_player_name;
 	std::string m_shadow_player_name;
 
-	size_t m_goal_counter = 0;
-	size_t m_shadow_goal_counter = 0;
 
 	void set_player_text(const std::string& new_text, const std::string& field_name);
 
 public:
-	std::atomic<game_state> m_state;
+	size_t m_goal_counter = 0;
+	size_t m_shadow_goal_counter = 0;
+
+	std::atomic<player_state> m_state = player_state::stop;
 
 	player(connection_ptr client_conn, const std::string& player_name, const std::string& shadow_player_name);
 
@@ -53,7 +54,7 @@ public:
 	size_t get_ball_x() {			return m_model->get_primitive("ball")->get_x(); }
 	size_t get_ball_y() {			return m_model->get_primitive("ball")->get_y(); }
 
-	void change_shadow_player_state(game_state state);
-	void change_player_state(game_state state);
+	void change_shadow_player_state(player_state state);
+	void change_player_state(player_state state);
 	void wait_for_ready();
 };

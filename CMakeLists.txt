@@ -44,6 +44,7 @@ if (MSVC)
 	target_compile_options(pingpong_client PRIVATE /W4)
     target_compile_definitions(pingpong_server PRIVATE _WIN32_WINNT=0x0601)
     target_compile_definitions(pingpong_client PRIVATE _WIN32_WINNT=0x0601)
+	add_compile_definitions(SET_WIN_CONSOLE_MODE)
 else ()
     target_compile_options(pingpong_server PRIVATE
         -Wall -Wextra -pedantic -Werror

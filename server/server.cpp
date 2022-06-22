@@ -32,25 +32,22 @@ void server::accept_handler(const std::error_code& error,
 	{
 		std::unique_lock<std::mutex> lock(m_cl_lock);
 
-		if (m_wait_client_list.size() >= 1)
+		if (m_create_session)
 		{
-			connection_ptr wait_client = m_wait_client_list.front();
-			m_wait_client_list.pop_front();
-
-			//Check - if wait client alive
-
-			session_ptr new_session = make_shared<srv_session>(wait_client, new_client);
+			session_ptr new_session = make_shared<srv_session>(m_wait_client, new_client);
 
 			std::thread th = std::thread(&server::session_th, this, new_session);
 			th.detach();
 
 			log << "Create new game session\r\n";
+			m_create_session = false;
 		}
 		else
 		{
-			m_wait_client_list.push_back(new_client);
+			m_wait_client = new_client;
 
 			log << "New client start waiting\r\n";
+			m_create_session = true;
 		}
 	}
 
@@ -107,22 +104,9 @@ void server::stop()
 	m_io_service.stop();
 	m_server_th.join();
 
-	while (true)
 	{
-		connection_ptr client;
-
-		{
-			std::lock_guard<std::mutex> lock(m_cl_lock);
-
-			if (m_wait_client_list.empty())
-				break;
-
-			client = m_wait_client_list.front();
-			m_wait_client_list.pop_front();
-		}
-
-		client->disconnect();
-		//Wait session_thread???
+		std::lock_guard<std::mutex> lock(m_cl_lock);
+		m_wait_client->disconnect();
 	}
 
 	while (true)
@@ -140,7 +124,7 @@ void server::stop()
 		}
 
 		session->stop_game();
-		//Wait session_thread???
+		//Wait session_th???
 	}
 
 	m_started = false;

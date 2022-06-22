@@ -32,8 +32,6 @@ int main(int argc, const char* argv[])
 		if (cmd == "stop")
 			break;
 	}
-	
-	//std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(10000));
 
 	srv.stop();
 

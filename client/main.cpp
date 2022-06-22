@@ -17,6 +17,7 @@
 
 #include "clnt_session.h"
 
+#ifdef SET_WIN_CONSOLE_MODE
 void set_console_mode()
 {
     HANDLE hInCon = GetStdHandle(STD_INPUT_HANDLE);
@@ -37,32 +38,14 @@ void set_console_mode()
     DWORD InMode = dwInOrigMode | ReqInMode;
     SetConsoleMode(hInCon, InMode);
 }
+#endif
 
 int main(int argc, const char* argv[])
 {
+
+#ifdef SET_WIN_CONSOLE_MODE
     set_console_mode();
-
-    /*
-    for (char i = 0; i < 255; i++)
-    {
-        cout << i;
-    }
-    */
-    /*
-    shared_ptr<screen_view> scr_view = make_shared<screen_view>();
-
-    scr_view->screen_init();
-    scr_view->cls();
-    scr_view->set_offset(1, 1);
-
-    controller ctrl(scr_view);
-
-    std::thread draw_th = std::thread(move_ball_th, std::ref(ctrl));
-    std::thread button_th = std::thread(get_button_th, std::ref(ctrl));
-
-    draw_th.join();
-    button_th.join();
-    */
+#endif
 
     if (argc < 3)
     {

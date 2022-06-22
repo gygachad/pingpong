@@ -1,13 +1,14 @@
 #pragma once
 
 #define SRV_TRESHOLD 60
-//#define SRV_TRESHOLD 10
-
 
 #define MAIN_FIELD_X 0
 #define MAIN_FIELD_Y 0
 #define MAIN_FIELD_W 25
 #define MAIN_FIELD_H 30
+
+#define SHADOW_BALL_OFFSET_X 18
+#define SHADOW_BALL_OFFSET_Y -25
 
 #define MAIN_PLAYERNAME_FIELD_X MAIN_FIELD_W + 1
 #define MAIN_PLAYERNAME_FIELD_Y MAIN_FIELD_H - 3
@@ -34,10 +35,17 @@
 #define KEY_RIGHT 77
 #define KEY_SPACEBAR 32
 
-enum class game_state
+enum class player_state
 {
 	wait,
 	ready,
+	start,
+	stop
+};
+
+enum class game_state
+{
+	wait,
 	start,
 	stop
 };

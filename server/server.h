@@ -48,8 +48,10 @@ class server
 	using connection_ptr = std::shared_ptr<connection>;
 	using thread_ptr = std::shared_ptr<std::thread>;
 
-	std::list<connection_ptr> m_wait_client_list;
+	//std::list<connection_ptr> m_wait_client_list;
+	connection_ptr m_wait_client;
 	std::mutex m_cl_lock;
+	bool m_create_session = false;
 
 	std::map<session_ptr, std::thread> m_session_pool;
 
