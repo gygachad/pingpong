@@ -5,7 +5,7 @@
 #include <asio.hpp>
 #include <shared_mutex>
 
-#include "..\str_tool.h"
+#include "../str_tool.h"
 
 #define BLOCK_SIZE 512
 

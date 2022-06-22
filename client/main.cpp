@@ -9,11 +9,10 @@
 #include <thread>
 #include <chrono>
 #include <map>
-#include <conio.h>
 
-#include "..\mvc\model.h"
-#include "..\mvc\screen_view.h"
-#include "..\connection.h"
+#include "../mvc/model.h"
+#include "../mvc/screen_view.h"
+#include "../connection.h"
 
 #include "clnt_session.h"
 
