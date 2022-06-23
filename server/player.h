@@ -1,9 +1,9 @@
 #pragma once
 
-#include "..\connection.h"
-#include "..\mvc\network_view.h"
-#include "..\mvc\model.h"
-#include "..\game_config.h"
+#include "../connection.h"
+#include "../mvc/network_view.h"
+#include "../mvc/model.h"
+#include "../game_config.h"
 
 class player
 {

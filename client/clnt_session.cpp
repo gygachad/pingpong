@@ -23,7 +23,7 @@ void clnt_session::input_th()
 #ifdef SET_WIN_CONSOLE_MODE
 		int c = _getch();
 #else
-		int c = getch();
+		int c = getc(stdin);
 #endif
 		ss << c << "\n";
 		

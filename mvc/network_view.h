@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-#include "..\connection.h"
+#include "../connection.h"
 
 #include "view.h"
 

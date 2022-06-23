@@ -9,8 +9,8 @@
 
 #include <asio.hpp>
 
-#include "..\server\srv_session.h"
-#include "..\connection.h"
+#include "../server/srv_session.h"
+#include "../connection.h"
 
 class logger
 {
@@ -58,9 +58,9 @@ class server
 	std::list<session_ptr> m_session_list;
 	std::mutex m_ss_list_lock;
 
+	asio::io_service& m_io_service;
 	uint16_t m_port;
 
-	asio::io_service& m_io_service;
 	std::thread m_server_th;
 	logger log;
 

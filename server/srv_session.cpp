@@ -1,7 +1,7 @@
 ﻿#include <ctime>
 #include <climits>
 
-#include "..\game_config.h"
+#include "../game_config.h"
 #include "srv_session.h"
 
 srv_session::srv_session(connection_ptr master, connection_ptr slave)
