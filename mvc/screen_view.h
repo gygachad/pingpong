@@ -20,6 +20,7 @@ public:
     void screen_init() override
     {
         std::cout << "\x1B[?25l";
+        std::cout << "\x1B[?28m";
     }
 
     void cls() override

@@ -3,7 +3,7 @@
 #include <sstream>
 #include <thread>
 
-#include "..\connection.h"
+#include "../connection.h"
 
 class clnt_session
 {

@@ -15,7 +15,7 @@ class player
 	net_view_ptr m_view;
 	model_ptr m_model;
 
-	std::atomic_flag m_ready;
+	std::atomic<bool> m_ready;
 	std::string m_player_name;
 	std::string m_shadow_player_name;
 

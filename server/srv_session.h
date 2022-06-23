@@ -23,8 +23,8 @@ class srv_session
 	std::thread m_p2_input_th;
 	
 	//Syncronization
-	std::atomic_flag m_stop_game;
-	std::atomic_flag m_start_game;
+	std::atomic<bool> m_stop_game;
+	std::atomic<bool> m_start_game;
 	std::atomic<game_state> m_state;
 
 	connection_ptr m_p1_client;

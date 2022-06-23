@@ -90,7 +90,7 @@ void player::change_player_state(player_state state)
 	{
 		set_player_text(m_player_name + ":ready", "player_state");
 		m_state.store(state);
-		m_ready.test_and_set();
+		m_ready.store(true);
 		m_ready.notify_one();
 		break;
 	}
@@ -102,7 +102,7 @@ void player::change_player_state(player_state state)
 	}
 	case player_state::stop:
 	{
-		m_ready.test_and_set();
+		m_ready.store(true);
 		m_ready.notify_one();
 		m_state.store(state);
 		break;

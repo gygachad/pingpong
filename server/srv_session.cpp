@@ -151,7 +151,7 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 
 	//Start game here
 	m_state.store(game_state::start);
-	m_start_game.test_and_set();
+	m_start_game.store(true);
 	m_start_game.notify_one();
 
 	for (size_t i = 300; i; i--)
@@ -312,7 +312,7 @@ void srv_session::stop_game()
 
 	m_state.store(game_state::stop);
 
-	m_stop_game.test_and_set();
+	m_stop_game.store(true);
 	m_stop_game.notify_one();
 }
 

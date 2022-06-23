@@ -1,9 +1,11 @@
+#ifdef SET_WIN_CONSOLE_MODE
 #include <conio.h>
+#endif
 #include <map>
 #include <sstream>
 
-#include "..\mvc\screen_view.h"
-#include "..\str_tool.h"
+#include "../mvc/screen_view.h"
+#include "../str_tool.h"
 #include "clnt_session.h"
 
 void clnt_session::start_game()
@@ -18,7 +20,11 @@ void clnt_session::input_th()
 
 	while (true)
 	{
+#ifdef SET_WIN_CONSOLE_MODE
 		int c = _getch();
+#else
+		int c = getch();
+#endif
 		ss << c << "\n";
 		
 		size_t len = m_srv.write(ss.str());
