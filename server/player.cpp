@@ -1,4 +1,4 @@
-#include "..\server\player.h"
+#include "../server/player.h"
 
 player::player(connection_ptr client_conn, const std::string& player_name, const std::string& shadow_player_name)
 {
@@ -23,9 +23,9 @@ void player::set_player_text(const std::string& new_text, const std::string& fie
 	auto old_primitive = m_model->get_primitive(field_name);
 
 	m_model->create_primitive<text_box>(field_name,
-										old_primitive->get_x(),
-										old_primitive->get_y(),
-										new_text);
+		old_primitive->get_x(),
+		old_primitive->get_y(),
+		new_text);
 }
 
 void player::set_name(const std::string& player_name)
@@ -90,7 +90,7 @@ void player::change_player_state(player_state state)
 	{
 		set_player_text(m_player_name + ":ready", "player_state");
 		m_state.store(state);
-		m_ready.store(true);
+		m_ready.test_and_set();
 		m_ready.notify_one();
 		break;
 	}
@@ -102,7 +102,7 @@ void player::change_player_state(player_state state)
 	}
 	case player_state::stop:
 	{
-		m_ready.store(true);
+		m_ready.test_and_set();
 		m_ready.notify_one();
 		m_state.store(state);
 		break;

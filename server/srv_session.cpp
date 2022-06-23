@@ -50,7 +50,7 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 	{
 		//Check if socket alive
 		size_t len = player_connection->read(buffer);
-		
+
 		if (len == 0)
 		{
 			stop_game();
@@ -68,49 +68,49 @@ void srv_session::input_th(player_ptr player1, player_ptr player2, bool master)
 
 			switch (key_code)
 			{
-				case KEY_LEFT:
-				{
-					if (player1->get_bar_pos() > battlefield_x + 1)
-						x_step = -1;
-					else
-						continue;
-					break;
-				}
-				case KEY_RIGHT:
-				{
-					if (player1->get_bar_pos() < battlefield_w - bar_len - 1)
-						x_step = 1;
-					else
-						continue;
-					break;
-				}
-				case KEY_SPACEBAR:
-				{
-					if (player1->m_state.load() == player_state::wait)
-					{
-						player2->change_shadow_player_state(player_state::ready);
-						player1->change_player_state(player_state::ready);
-					}
+			case KEY_LEFT:
+			{
+				if (player1->get_bar_pos() > battlefield_x + 1)
+					x_step = -1;
+				else
 					continue;
-				}
-				default:
+				break;
+			}
+			case KEY_RIGHT:
+			{
+				if (player1->get_bar_pos() < battlefield_w - bar_len - 1)
+					x_step = 1;
+				else
+					continue;
+				break;
+			}
+			case KEY_SPACEBAR:
+			{
+				if (player1->m_state.load() == player_state::wait)
 				{
-					if (player1->m_state.load() == player_state::wait)
+					player2->change_shadow_player_state(player_state::ready);
+					player1->change_player_state(player_state::ready);
+				}
+				continue;
+			}
+			default:
+			{
+				if (player1->m_state.load() == player_state::wait)
+				{
+					if (custom_player_name.length() < 10)
 					{
-						if (custom_player_name.length() < 10)
+						if (key_code >= 'a' && key_code <= 'z')
 						{
-							if (key_code >= 'a' && key_code <= 'z')
-							{
-								custom_player_name += char(key_code);
+							custom_player_name += char(key_code);
 
-								//update names on screen
-								player1->set_name(custom_player_name);
-								player2->set_shadow_name(custom_player_name);
-							}
+							//update names on screen
+							player1->set_name(custom_player_name);
+							player2->set_shadow_name(custom_player_name);
 						}
 					}
-					continue;
 				}
+				continue;
+			}
 			}
 
 			//Loack Bar/Ball operation
@@ -151,7 +151,7 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 
 	//Start game here
 	m_state.store(game_state::start);
-	m_start_game.store(true);
+	m_start_game.test_and_set();
 	m_start_game.notify_one();
 
 	for (size_t i = 300; i; i--)
@@ -213,10 +213,10 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 		}
 
 		//Change ball angle if ball hit bar corners
- 		if (shadow_y == MAIN_FIELD_H - 3)
+		if (shadow_y == MAIN_FIELD_H - 3)
 		{
 			bar_x = player2->get_bar_pos();
-			
+
 			if (shadow_x - x_step >= bar_x && shadow_x - x_step < bar_x + p2_bar_w)
 			{
 				if (y_step != 1)
@@ -228,13 +228,13 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 					if ((bar_x == shadow_x - x_step) || (bar_x + p2_bar_w - 1 == shadow_x - x_step))
 						x_step = x_step * 3;
 				}
-			}	
+			}
 		}
 
 		if (y == MAIN_FIELD_H - 3)
 		{
 			bar_x = player1->get_bar_pos();
-			
+
 			if (x + x_step >= bar_x && x + x_step < bar_x + p1_bar_w)
 			{
 				if (y_step != -1)
@@ -312,7 +312,7 @@ void srv_session::stop_game()
 
 	m_state.store(game_state::stop);
 
-	m_stop_game.store(true);
+	m_stop_game.test_and_set();
 	m_stop_game.notify_one();
 }
 
