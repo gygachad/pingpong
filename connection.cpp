@@ -105,11 +105,13 @@ size_t connection::write(const void* data, size_t len)
 
 void connection::disconnect()
 {
-	write_lock lock(m_sock_lock);
-	
-	std::error_code ec = asio::error::connection_aborted;
-	m_sock.close(ec);
+	std::error_code ec = asio::error::connection_reset;
+	//Cancel all async operations
 	m_sock.shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+	m_sock.cancel(ec);
+
+	write_lock lock(m_sock_lock);
+	m_sock.close(ec);
 	
 	m_connected = false;
 }

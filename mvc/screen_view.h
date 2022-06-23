@@ -19,8 +19,8 @@ public:
 
     void screen_init() override
     {
-        std::cout << "\x1B[?25l";
-        std::cout << "\x1B[?28m";
+        std::cout << "\x1B[?25l";//make cursor invisible
+        std::cout << "\x1B[28m";//set hidden/invisible mode
     }
 
     void cls() override

@@ -151,8 +151,9 @@ void srv_session::paint_th(player_ptr player1, player_ptr player2)
 
 	//Start game here
 	m_state.store(game_state::start);
+	//Notify all beacuse wait (stop_game) called from 2 input_th
 	m_start_game.test_and_set();
-	m_start_game.notify_one();
+	m_start_game.notify_all();
 
 	for (size_t i = 300; i; i--)
 	{
@@ -311,7 +312,6 @@ void srv_session::stop_game()
 	m_start_game.wait(false);
 
 	m_state.store(game_state::stop);
-
 	m_stop_game.test_and_set();
 	m_stop_game.notify_one();
 }
@@ -323,12 +323,7 @@ void srv_session::wait_end()
 	m_p1_client->disconnect();
 	m_p2_client->disconnect();
 
-	if (m_paint_th.joinable())
-		m_paint_th.join();
-
-	if (m_p1_input_th.joinable())
-		m_p1_input_th.join();
-
-	if (m_p2_input_th.joinable())
-		m_p2_input_th.join();
+	m_paint_th.join();
+	m_p1_input_th.join();
+	m_p2_input_th.join();
 }
